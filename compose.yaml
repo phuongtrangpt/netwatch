@@ -1,6 +1,6 @@
 services:
   netwatch:
-    image: ${NETWATCH_IMAGE:-netwatch:1.0.0}
+    image: ${NETWATCH_IMAGE:-netwatch:1.0.4}
     container_name: netwatch
     restart: unless-stopped
     env_file: .env

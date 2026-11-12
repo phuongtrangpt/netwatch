@@ -4,10 +4,20 @@ Bản chuyển NetWatch hiện có sang tiến trình Node.js và SQLite cục b
 
 **Chọn một cách cài:** Pi đang chạy HAOS → ưu tiên add-on Supervisor ở phần 5. `docker run` ở phần 4 chỉ dùng nếu đã có shell truy cập Docker của máy chủ, không phải Terminal add-on thông thường.
 
-## 1. Trong bộ mã này có gì?
+## 1. Nền tảng được hỗ trợ (1.0.4)
+
+NetWatch có ba cách chạy:
+
+- **Home Assistant OS:** cài add-on. Supervisor tự tải đúng image ARM64/ARMv7.
+- **Windows 10/11 x64:** tải gói portable `netwatch-windows-x64-1.0.4.zip` ở [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén và mở `Start-NetWatch.bat`. Gói gồm Node.js và thư viện SQLite, không cần Docker/Node cài sẵn. Mật khẩu Admin được hỏi kín ở lần chạy đầu; dữ liệu nằm trong thư mục `data` bên cạnh gói.
+- **Docker Desktop trên Windows/macOS hoặc Docker Engine trên Linux:** dùng image đa kiến trúc `ghcr.io/phuongtrangpt/netwatch:1.0.4`. Docker tự chọn `linux/amd64`, `linux/arm64` hoặc `linux/arm/v7`. Mac Apple Silicon chạy ARM64, Intel/PC x86-64 chạy AMD64.
+
+Với bản Windows, mở `http://localhost:8080`. Để router khác gửi dữ liệu vào máy Windows, cho phép TCP 8080 trên mạng Private của Windows Firewall và dùng IP LAN của máy. Khi cập nhật, dừng ứng dụng, sao lưu thư mục `data`, giải nén gói mới vào cùng chỗ và giữ nguyên `data`.
+
+## 2. Trong bộ mã này có gì?
 
 ```
-Dockerfile                   Build nhiều giai đoạn; mặc định node:20-alpine
+Dockerfile                   Build nhiều giai đoạn; mặc định node:22-alpine
 .dockerignore                Không đóng gói .env, dữ liệu, node_modules của Windows
 .env.example                 Mật khẩu và URL nhận dữ liệu
 compose.yaml                 Tùy chọn cho hệ có Docker Compose
@@ -23,9 +33,9 @@ Nguồn cơ sở: NetWatch commit `a6eeb9c6127b132f09ad2f33fd7d8f5d46261404`. Đ
 
 Ứng dụng nghe cổng **8080**. `/data/netwatch.db` lưu dự án, cấu hình WAN, thiết bị ghim/alias, vị trí, neo/điểm uốn, số liệu và lịch sử. SQLite dùng WAL; không sao chép riêng file .db trong lúc ứng dụng đang ghi. `/data/auth.json` lưu hash mật khẩu và khóa phiên. Khi khởi động lại hoặc thay container, phải dùng lại đúng volume. Lịch sử hiện được dọn theo logic bản gốc (khoảng 7 ngày), giao diện truy vấn tối đa 24 giờ.
 
-Node 20 đã hết hỗ trợ tại thời điểm chuẩn bị bộ này (12/11/2026). Dockerfile vẫn đúng yêu cầu `node:20-alpine`, có `ARG NODE_IMAGE` để đổi sang LTS còn hỗ trợ. Trước khi đổi, kiểm tra manifest của base image có đủ kiến trúc cần dùng; không mặc định mọi Node LTS đều có ARM32. Không đưa `.env`, mật khẩu, database hoặc token router vào image.
+Dockerfile mặc định `node:22-alpine`, có manifest chính thức cho amd64, ARM64 và ARMv7. Node.js 24 Alpine hiện không cung cấp ARMv7 nên không phù hợp làm base chung cho các Pi ARM32. Gói Windows portable dùng Node.js 24 LTS riêng. Không đưa `.env`, mật khẩu, database hoặc token router vào image.
 
-## 2. Chuẩn bị Windows 11
+## 3. Chuẩn bị Windows 11
 
 1. Cài Docker Desktop, bật backend WSL2, chọn **Linux containers** và mở Docker Desktop.
 2. Giải nén bộ mã, mở PowerShell tại thư mục có Dockerfile.
@@ -36,30 +46,30 @@ docker version
 docker buildx version
 docker buildx create --name netwatch-builder --driver docker-container --use
 docker buildx inspect --bootstrap
-docker buildx imagetools inspect node:20-alpine
+docker buildx imagetools inspect node:22-alpine
 ```
 
 Nếu builder đã tồn tại, dùng `docker buildx use netwatch-builder` thay lệnh create. Docker Desktop thường có sẵn khả năng giả lập ARM. Không chép `node_modules` từ Windows vào image: module SQLite được cài/biên dịch trong từng kiến trúc đích.
 
-## 3. Build ARM64 và ARMv7
+## 4. Build đa kiến trúc
 
-### A. Docker Hub — một tag dùng cho hai kiến trúc
+### A. Docker Hub — một tag dùng cho ba kiến trúc
 
 Thay `YOUR_DOCKERHUB_USER` bằng tên tài khoản Docker Hub viết thường, tạo repository `netwatch`. Lệnh login yêu cầu thông tin tài khoản/token trên máy bạn; không gửi token trong cuộc trò chuyện.
 
 ```powershell
 docker login -u YOUR_DOCKERHUB_USER
-docker buildx build --platform linux/arm64,linux/arm/v7 -t YOUR_DOCKERHUB_USER/netwatch:1.0.0 --push .
-docker buildx imagetools inspect YOUR_DOCKERHUB_USER/netwatch:1.0.0
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t YOUR_DOCKERHUB_USER/netwatch:1.0.4 --push .
+docker buildx imagetools inspect YOUR_DOCKERHUB_USER/netwatch:1.0.4
 ```
 
-Kết quả inspect phải có cả `linux/arm64` và `linux/arm/v7`. Docker trên Pi sẽ tự kéo bản phù hợp. Build module SQLite dưới giả lập có thể mất khá lâu. Không ép stage dependencies chạy trên BUILDPLATFORM vì binary SQLite sẽ sai kiến trúc.
+Kết quả inspect của bản 1.0.4 có `linux/amd64`, `linux/arm64` và `linux/arm/v7`. Docker trên Pi sẽ tự kéo bản phù hợp. Build module SQLite dưới giả lập có thể mất khá lâu. Không ép stage dependencies chạy trên BUILDPLATFORM vì binary SQLite sẽ sai kiến trúc.
 
-Ví dụ đổi base image (chỉ sau khi inspect xác nhận có đúng các nền tảng bạn cần):
+Trước khi đổi base image, inspect manifest; ví dụ `node:24-alpine` hiện không có ARMv7 và sẽ làm mất khả năng build cho Pi ARM32:
 
 ```powershell
 docker buildx imagetools inspect node:22-alpine
-docker buildx build --build-arg NODE_IMAGE=node:22-alpine --platform linux/arm64,linux/arm/v7 -t YOUR_DOCKERHUB_USER/netwatch:1.0.0 --push .
+docker buildx imagetools inspect node:24-alpine
 ```
 
 ### B. GitHub Container Registry
@@ -68,8 +78,8 @@ Tạo token GitHub có quyền ghi packages phù hợp. Nhập token ở lời n
 
 ```powershell
 docker login ghcr.io -u YOUR_GITHUB_USER
-docker buildx build --platform linux/arm64,linux/arm/v7 -t ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.0 --push .
-docker buildx imagetools inspect ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.0
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.4 --push .
+docker buildx imagetools inspect ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.4
 ```
 
 Image private cần đăng nhập registry trên máy kéo image; với HAOS cần cấu hình registry của Supervisor. Dùng image public không chứa dữ liệu/secret là cách đơn giản hơn cho add-on cá nhân.
@@ -79,11 +89,12 @@ Image private cần đăng nhập registry trên máy kéo image; với HAOS c�
 Xuất **mỗi kiến trúc một file**, dùng `type=docker`; không dùng `type=tar` (chỉ xuất filesystem, không phải image để docker load).
 
 ```powershell
-docker buildx build --platform linux/arm64 -t netwatch:1.0.0 --provenance=false --output type=docker,dest=netwatch-arm64.tar .
-docker buildx build --platform linux/arm/v7 -t netwatch:1.0.0 --provenance=false --output type=docker,dest=netwatch-armv7.tar .
+docker buildx build --platform linux/amd64 -t netwatch:1.0.4 --provenance=false --output type=docker,dest=netwatch-amd64.tar .
+docker buildx build --platform linux/arm64 -t netwatch:1.0.4 --provenance=false --output type=docker,dest=netwatch-arm64.tar .
+docker buildx build --platform linux/arm/v7 -t netwatch:1.0.4 --provenance=false --output type=docker,dest=netwatch-armv7.tar .
 ```
 
-Pi/HAOS aarch64 dùng arm64. `armv7l` trên hệ ARM32 dùng arm/v7. Đừng nhầm kiến trúc của Windows với kiến trúc đích.
+Máy Windows/macOS dùng image Docker `linux/amd64` hoặc `linux/arm64` theo Docker Desktop. Pi/HAOS aarch64 dùng arm64; `armv7l` dùng arm/v7. Windows portable ZIP chỉ dành cho x64.
 
 Nếu đã bật SSH **host** HAOS qua khóa SSH theo tài liệu chính thức (cổng 22222), ví dụ chuyển bản ARM64:
 
@@ -95,12 +106,12 @@ Trên host Pi:
 
 ```sh
 docker load -i /mnt/data/netwatch-arm64.tar
-docker image inspect netwatch:1.0.0 --format '{{.Os}}/{{.Architecture}}'
+docker image inspect netwatch:1.0.4 --format '{{.Os}}/{{.Architecture}}'
 ```
 
 Luồng .tar này phù hợp Docker thủ công. Với add-on dùng config `image:`, hãy build/push registry; không giả định một image đã load thủ công sẽ được Supervisor nhận là bản add-on đã cài.
 
-## 4. Lệnh docker run — chỉ tại shell Docker của máy chủ
+## 5. Lệnh docker run — chỉ tại shell Docker của máy chủ
 
 **Không copy mù vào Terminal & SSH thông thường của HAOS.** Add-on Terminal chạy trong container riêng và có thể không có lệnh Docker hoặc quyền docker.sock. Kiểm tra `docker version`: phải hiện cả Client và Server. Không cần tắt Protection mode để cài NetWatch bằng luồng add-on phần 5.
 
@@ -110,10 +121,10 @@ Sau khi image đã load từ .tar, lệnh dưới đây dùng được. **Thay m
 
 ```sh
 docker volume create my-netmon-data
-docker run -d --name netwatch --restart unless-stopped -p 8080:8080 -v my-netmon-data:/data -e NETWATCH_PASSWORD='THAY_BANG_MAT_KHAU_RIENG_12_KY_TU_TRO_LEN' -e NETWATCH_INGEST_URL='http://192.168.1.50:8080' --log-driver json-file --log-opt max-size=5m --log-opt max-file=3 netwatch:1.0.0
+docker run -d --name netwatch --restart unless-stopped -p 8080:8080 -v my-netmon-data:/data -e NETWATCH_PASSWORD='THAY_BANG_MAT_KHAU_RIENG_12_KY_TU_TRO_LEN' -e NETWATCH_INGEST_URL='http://192.168.1.50:8080' --log-driver json-file --log-opt max-size=5m --log-opt max-file=3 netwatch:1.0.4
 ```
 
-Nếu dùng registry, thay image cuối lệnh bằng `YOUR_DOCKERHUB_USER/netwatch:1.0.0` hoặc `ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.0`. Docker tự pull nếu chưa có image; private registry cần `docker login` trước.
+Nếu dùng registry, thay image cuối lệnh bằng `YOUR_DOCKERHUB_USER/netwatch:1.0.4` hoặc `ghcr.io/YOUR_GITHUB_USER/netwatch:1.0.4`. Docker tự pull nếu chưa có image; private registry cần `docker login` trước.
 
 Mở `http://IP_CUA_PI:8080` bằng trình duyệt, nhập mật khẩu đã đặt.
 
@@ -129,7 +140,7 @@ Không cần `--privileged`, `--network host`, Docker socket hoặc bind mount `
 
 HTTP trong ví dụ dành cho LAN/VPN tin cậy. Không mở cổng 8080 trực tiếp ra Internet; truy cập ngoài nhà bằng VPN hoặc reverse proxy HTTPS. Nếu proxy chấm dứt TLS, đặt `NETWATCH_PUBLIC_URL=https://ten-mien-cua-ban` đúng URL ngoài (không có đường dẫn) để kiểm tra Origin hoạt động. Cookie tự bật Secure khi URL này là HTTPS; proxy cần giữ Host phù hợp. Bản này không có tự cấp chứng chỉ TLS.
 
-## 5. Cài online qua kho add-on GitHub
+## 6. Cài online qua kho add-on GitHub
 
 Xem [hướng dẫn cài đặt hiện hành](../README.md) và [cấu hình NetWatch](../netwatch/DOCS.md).
 Kho đã cấu hình image `ghcr.io/phuongtrangpt/netwatch`, không cần sửa placeholder Docker Hub.
@@ -137,7 +148,7 @@ Supervisor tự quản lý /data, khởi động và backup của add-on. Không
 để tạo thêm một container trùng với add-on. /share chỉ được truy cập nếu có mapping phù hợp;
 ứng dụng này không cần /share.
 
-## 6. Chuyển từ web cũ sang Pi
+## 7. Chuyển từ web cũ sang Pi
 
 Không có tự động sao chép database Cloudflare/D1 từ web cũ sang volume. Hai bản lưu riêng. Các bước:
 
@@ -159,7 +170,7 @@ Với add-on HAOS, đường thao tác dữ liệu app riêng khác Docker thủ
 
 Không cần mở RouterOS API 8728 cho phiên bản Docker này: giữ cơ chế push đang dùng. Các E50UG ở nơi khác phải có đường tới Pi qua VPN/site-to-site; đóng Docker không tự tạo đường VPN đó. Router vẫn cần quyền fetch/scheduler trong device-mode như bản cũ.
 
-## 7. Backup, cập nhật và mật khẩu
+## 8. Backup, cập nhật và mật khẩu
 
 Docker thủ công — backup toàn volume khi ứng dụng đã dừng, để SQLite/WAL và auth nhất quán:
 
@@ -181,11 +192,11 @@ docker run --rm -v my-netmon-data:/data alpine:3.22 rm /data/auth.json
 
 Sau đó tạo lại container với cùng volume và mật khẩu mới, khởi động. Chỉ xóa `auth.json`, KHÔNG xóa database. Khóa phiên sẽ đổi, phiên đăng nhập cũ hết hiệu lực. Với HAOS add-on cần thao tác đúng dữ liệu app riêng; không xóa tùy tiện thư mục HA.
 
-## 8. Kiểm tra đã thực hiện và giới hạn
+## 9. Kiểm tra đã thực hiện và giới hạn
 
 Đã cài dependency, build frontend/server và chạy 32 kiểm tra trên Linux x86_64 với Node 24 của môi trường soạn mã. Kiểm tra gồm logic định tuyến dây/neo/vị trí, xác thực cục bộ, chặn header giả/CSRF, tạo bộ cài, ingest, migration bảng, lưu alias/ghim/tọa độ/history, khởi động lại đọc SQLite và nhập dữ liệu cloud không ghi đè.
 
-Môi trường này không có Docker daemon; **chưa build image bằng Buildx, chưa chạy Node 20 trong Alpine, chưa test thực tế arm64/armv7 hoặc cài add-on trên Pi**. Hai kiến trúc chỉ được xác nhận sau khi lệnh build/push thành công và chạy thử trên máy đích. Không có image nào đã được đẩy lên tài khoản của bạn. Bản web đang chạy chưa bị thay đổi.
+Bản Windows portable được tạo và smoke test trên runner Windows x64 trong GitHub Actions. Image Docker được build cho linux/amd64, linux/arm64 và linux/arm/v7; CI khởi động thử ARM64/ARMv7. Windows ARM và kiểm tra cài thực tế trên mọi bản phân phối macOS/Linux cần Docker Desktop/Engine tương ứng.
 
 Nguồn chính thức:
 - https://docs.docker.com/build/building/multi-platform/

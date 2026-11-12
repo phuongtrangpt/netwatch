@@ -1,10 +1,10 @@
 {
   "name": "netwatch-local",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.13"
   },
   "scripts": {
     "build": "vite build && node scripts/build-server.mjs",
