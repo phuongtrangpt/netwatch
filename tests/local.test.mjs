@@ -70,7 +70,8 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   const forged=viewer.cookie.replace('viewer:view:','owner:');assert.equal((await api('/api/dashboard',forged)).status,401);
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
-  r=await api('/api/dashboard',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
+  r=await api('/api/dashboard?module=topology',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
+  r=await api('/api/dashboard?module=overview',viewer.cookie);assert.equal((await r.json()).topology.devices.length,0);
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'another-password-123',permissions:{'*':['overview','topology']}},{origin:'http://wrong.test'});assert.equal(r.status,403);
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'test-password-12345',permissions:{'*':['overview','topology']}});assert.equal(r.status,400);
   const stored=readFileSync(join(data,'viewers.json'),'utf8');assert.ok(!stored.includes('viewer-password-123'));assert.ok(!JSON.stringify(await (await api('/api/viewer',admin.cookie)).json()).includes('hash'));
