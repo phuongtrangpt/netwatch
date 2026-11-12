@@ -57,6 +57,10 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
  function api(path,cookie,body,extra={}){return fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie:cookie||'','Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});}
  try{
   await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303,output);
+  let proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
+  assert.equal(proxyLogin.status,303,'Same-origin mobile form behind reverse proxy must be accepted');
+  proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://attacker.example.test','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
+  assert.equal(proxyLogin.status,403,'Cross-origin login must be rejected');
   let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),[]);
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
