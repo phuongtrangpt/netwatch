@@ -10,6 +10,7 @@ if(!existsSync(path)){
  writeFileSync(path,JSON.stringify({salt,hash:scryptSync(password,salt,32).toString('hex'),key:randomBytes(32).toString('hex')}),{mode:0o600,flag:'wx'});
 }
 const credentials=JSON.parse(readFileSync(path,'utf8'));
+export function checkPassword(password:string){return timingSafeEqual(scryptSync(password,credentials.salt,32),Buffer.from(credentials.hash,'hex'));}
 export const MODULES=['overview','topology','wan','lan','clients','ports','routes','pppoe','events'] as const;
 export type Module=typeof MODULES[number];
 type Viewer={username:string;enabled:boolean;salt?:string;hash?:string;revision:string;permissions:Record<string,Module[]>};
