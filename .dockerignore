@@ -19,3 +19,5 @@ README.md
 **/options.json
 **/netwatch-cloud-export.json
 *.backup
+**/viewer.json
+**/viewer.json.tmp

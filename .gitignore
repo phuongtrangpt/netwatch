@@ -14,3 +14,5 @@ netwatch-cloud-export.json
 *.zip
 *.backup
 .DS_Store
+viewer.json
+viewer.json.tmp

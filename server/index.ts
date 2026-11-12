@@ -3,7 +3,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {db,sqlite} from './database';
 import {requestContext} from '../lib/server';
-import {authenticated,checkPassword,session,loginHTML} from './auth';
+import {authenticated,checkLogin,session,loginHTML,accountName,viewerInfo,saveViewer} from './auth';
 import * as dashboard from '../app/api/dashboard/route';
 import * as projects from '../app/api/projects/route';
 import * as config from '../app/api/config/route';
@@ -27,6 +27,8 @@ const server=createServer(async(req,res)=>{
    if(path.startsWith('/api/')){res.writeHead(401,{'Content-Type':'application/json'});res.end('{"error":"Đăng nhập tại /login"}');}
    else{res.writeHead(302,{Location:'/login'});res.end();}return;
   }
+  // Viewer access is an explicit read allowlist; router ingest has separate bearer authentication.
+  if(auth==='viewer'&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
   let body:Buffer|undefined;
   if(!['GET','HEAD'].includes(method)){
    const chunks:Buffer[]=[];let size=0;
@@ -38,22 +40,33 @@ const server=createServer(async(req,res)=>{
     if(req.headers.origin!==url.origin){res.writeHead(403);res.end('Invalid origin');return;}
     const key=req.socket.remoteAddress||'local',now=Date.now(),f=failures.get(key);
     if(f&&f.until>now&&f.count>=5){res.writeHead(429);res.end('Chờ 5 phút rồi thử lại.');return;}
-    const password=new URLSearchParams(body?.toString()).get('password')||'';
-    if(password.length<=256&&checkPassword(password)){
-     failures.delete(key);res.writeHead(303,{Location:'/', 'Set-Cookie':`netwatch=${session()}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${(process.env.COOKIE_SECURE==='true'||process.env.NETWATCH_PUBLIC_URL?.startsWith('https:'))?'; Secure':''}`});res.end();return;
+    const form=new URLSearchParams(body?.toString()),password=form.get('password')||'',username=form.get('username')||'';
+    const role=password.length<=256&&username.length<=32?checkLogin(username,password):null;
+    if(role){
+     failures.delete(key);res.writeHead(303,{Location:'/', 'Set-Cookie':`netwatch=${session(role)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${(process.env.COOKIE_SECURE==='true'||process.env.NETWATCH_PUBLIC_URL?.startsWith('https:'))?'; Secure':''}`});res.end();return;
     }
     if(failures.size>2000)for(const [k,v] of failures)if(v.until<now)failures.delete(k);
-    failures.set(key,{count:f&&f.until>now?f.count+1:1,until:now+300000});res.writeHead(401,{'Content-Type':'text/html; charset=utf-8'});res.end(loginHTML.replace('<h1>NetWatch</h1>','<h1>NetWatch</h1><p>Sai mật khẩu.</p>'));return;
+    failures.set(key,{count:f&&f.until>now?f.count+1:1,until:now+300000});res.writeHead(401,{'Content-Type':'text/html; charset=utf-8'});res.end(loginHTML.replace('<h1>NetWatch</h1>','<h1>NetWatch</h1><p>Sai tên đăng nhập hoặc mật khẩu.</p>'));return;
    }
    if(method!=='GET'){res.writeHead(405);res.end();return;}
    res.setHeader('Content-Type','text/html; charset=utf-8');res.end(loginHTML);return;
   }
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
+   if(path==='/api/session'&&method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:auth,username:auth?accountName(auth):null}));return;}
+   if(path==='/api/viewer'){
+    if(auth!=='owner'){res.writeHead(403);res.end();return;}
+    res.setHeader('Content-Type','application/json');
+    if(method==='GET'){res.end(JSON.stringify(viewerInfo()));return;}
+    if(method!=='POST'){res.writeHead(405);res.end();return;}
+    if(req.headers.origin!==url.origin){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    if(!body||body.length>4096){res.writeHead(413);res.end();return;}
+    try{res.end(JSON.stringify(saveViewer(JSON.parse(body.toString()))));}catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Không lưu được tài khoản.'}));}return;
+   }
    const handler=routes[path.slice(5)]?.[method];if(!handler){res.writeHead(404);res.end();return;}
    const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
    const request=new Request(url,{method,headers,...(body?{body}: {})});
-   const result:Response=await requestContext.run({authenticated:auth},()=>handler(request));
+   const result:Response=await requestContext.run({authenticated:!!auth,role:auth||undefined},()=>handler(request));
    res.writeHead(result.status,Object.fromEntries(result.headers.entries()));res.end(Buffer.from(await result.arrayBuffer()));return;
   }
   if(!['GET','HEAD'].includes(method)){res.writeHead(405);res.end();return;}

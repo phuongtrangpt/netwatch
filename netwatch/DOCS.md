@@ -25,3 +25,10 @@ không xóa database để đặt lại mật khẩu.
 
 Giao diện mở trực tiếp cổng 8080, chưa dùng Ingress. Dữ liệu web cũ chưa tự chuyển sang Pi.
 Công cụ xuất/nhập cấu hình có trong scripts; cần thao tác riêng khi chuyển từ bản cloud.
+
+## Chia sẻ quyền xem
+
+Từ 1.0.2, chủ web đăng nhập `admin` với mật khẩu hiện có, vào Cấu hình giám sát →
+Tài khoản chỉ xem. Bật và đặt tên/mật khẩu riêng để chia sẻ. Tài khoản này đọc được
+mọi dự án, không chỉnh sửa, không nhận bộ cài router. Có thể tắt/đổi mật khẩu trên
+web để thu hồi phiên xem. Không phải sửa Configuration của add-on để tạo viewer.

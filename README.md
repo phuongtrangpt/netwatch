@@ -36,7 +36,7 @@ packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.1`, gồm `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.2`, gồm `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Dockerfile mặc định `node:20-alpine` theo yêu cầu ban đầu. Node 20 đã EOL; có thể đổi
 NODE_IMAGE sang LTS còn hỗ trợ sau khi kiểm tra manifest và tương thích hai kiến trúc.
@@ -45,3 +45,18 @@ CI chạy kiểm tra mã và khởi động thử hai image bằng QEMU; thử t
 Đây là bản ứng dụng độc lập, không tự đồng bộ dữ liệu với web NetWatch trên cloud.
 
 [Docker, backup và chuyển dữ liệu](docs/DOCKER.md)
+
+## Tài khoản chỉ xem (từ 1.0.2)
+
+- Quản trị đăng nhập tên **admin**, dùng mật khẩu quản trị đã đặt trước đây. Phiên
+  quản trị đang dùng và database cũ vẫn được giữ khi cập nhật.
+- Trong **Cấu hình giám sát → Tài khoản chỉ xem**, bật tài khoản, đặt tên (mặc định
+  `view`) và mật khẩu riêng ít nhất 12 ký tự rồi Lưu tài khoản.
+- Người xem mở cùng địa chỉ web, nhập tên/mật khẩu này. Xem được tất cả dự án,
+  biểu đồ, WAN/LAN/VLAN, thiết bị, PPPoE, nhật ký và sơ đồ; vẫn tìm kiếm, chọn dự án,
+  phóng to và toàn màn hình. Không thêm/sửa/xóa, kéo thiết bị, lưu cấu hình,
+  thay dây hoặc tải bộ cài/khóa router. API cũng kiểm tra quyền, không chỉ ẩn nút.
+- Đổi tên/mật khẩu hoặc tắt tài khoản sẽ thu hồi các phiên xem đang có. Để trống
+  mật khẩu khi lưu nếu muốn giữ mật khẩu hiện tại.
+- Cấu hình tài khoản xem lưu trong `/data/viewer.json` dưới dạng hash mật khẩu;
+  được giữ cùng volume/backup, không commit file này lên GitHub.
