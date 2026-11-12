@@ -23,7 +23,7 @@ const browserOrigin=(req:any,url:URL)=>{
  const allowed=new Set<string>();
  if(process.env.NETWATCH_PUBLIC_URL)allowed.add(new URL(process.env.NETWATCH_PUBLIC_URL).origin);
  for(const item of (process.env.NETWATCH_ALLOWED_ORIGINS||'').split(',')){if(item.trim())try{allowed.add(new URL(item.trim()).origin);}catch{}}
- const host=req.headers.host;if(typeof host==='string')for(const scheme of ['http:','https:'])try{allowed.add(new URL(scheme+'//'+host).origin);}catch{}
+ const host=req.headers.host;if(typeof host==='string')try{allowed.add(new URL((req.socket.encrypted?'https://':'http://')+host).origin);}catch{}
  if(process.env.NETWATCH_TRUST_PROXY==='true'){
   const forwarded=(req.headers['x-forwarded-host']||'').split(',')[0]?.trim();
   const proto=(req.headers['x-forwarded-proto']||'').split(',')[0]?.trim();
