@@ -36,7 +36,7 @@ packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.0`, gồm `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.1`, gồm `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Dockerfile mặc định `node:20-alpine` theo yêu cầu ban đầu. Node 20 đã EOL; có thể đổi
 NODE_IMAGE sang LTS còn hỗ trợ sau khi kiểm tra manifest và tương thích hai kiến trúc.

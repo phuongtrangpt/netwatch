@@ -25,13 +25,14 @@ const pppSections:[string,string,string[]][]=[
 ];
 function collector(origin:string,serviceToken:string,ingestToken:string,upgrade=false,mode='infrastructure',project='main'){
  const url=quote(origin+'/api/ingest'+(project==='main'?'':'?project='+encodeURIComponent(project)));const enabledSections=mode==='pppoe'?[...sections,...pppSections.filter(s=>s[0]!=='pppactive')]:sections;const headers=quote('Content-Type:application/json,Authorization: Bearer '+ingestToken);
+ const tlsOptions=upgrade?"__NW_TLS_OPTIONS__":origin.startsWith("https://")?" check-certificate=yes":"";
  const emit=`
-    :if ([/system script job print count-only where script="netwatch-collect"] > 1) do={ :return }
+    :if ([:len [/system script job find where script="netwatch-collect"]] > 1) do={ :return "" }
     :local nwTransmit do={
         :local nwBody $1
         :local nwPayload [:serialize to=json value=$nwBody options=json.no-string-conversion]
         :if ([:len $nwPayload] > 62000) do={ :error "NetWatch payload exceeds safe size" }
-        :local nwResponse [${upgrade?"__NW_FETCH_CONFIG__":`/tool fetch url=${url} http-method=post http-header-field=${headers}`} http-data=$nwPayload check-certificate=yes output=user as-value duration=15s]
+        :local nwResponse [${upgrade?"__NW_FETCH_CONFIG__":`/tool fetch url=${url} http-method=post http-header-field=${headers}`} http-data=$nwPayload${tlsOptions} output=user as-value duration=15s]
         :return [:deserialize from=json value=($nwResponse->"data")]
     }
     :local nwSendSection do={
@@ -79,9 +80,9 @@ ${mode==='pppoe'?`    :do { :set ($nwResource->"ppp-active-count") [/ppp active 
     :do { :set ($nwResource->"ppp-account-count") [/ppp secret print count-only] } on-error={}`:''}
     :local nwMetrics {"collector"=4;"schema"=1;"kind"="metrics";"identity"=[/system identity get name];"resource"=$nwResource;"stats"=$nwStats}
     :local nwReply [:toarray ""]
-    :do { :set nwReply [$nwTransmit $nwMetrics] } on-error={
-        :log warning "NetWatch: metrics upload failed; check DNS, time, HTTPS and device-mode"
-        :error "NetWatch: upload failed"
+    :onerror nwUploadError in={ :set nwReply [$nwTransmit $nwMetrics] } do={
+        :log warning ("NetWatch: metrics upload failed: " . $nwUploadError)
+        :error ("NetWatch: upload failed: " . $nwUploadError)
     }
     :local nwProbeRows [:toarray ""]
     :local nwProbeCount 0
@@ -133,7 +134,7 @@ export function installer(origin:string,serviceToken:string,ingestToken:string,p
 
 export function upgradeInstaller(mode='infrastructure'){
  const template=quote(collector('', '', '', true,mode));
- return `# NetWatch v4 upgrade - keeps existing keys on this router.\n# Updates only the NetWatch script. No network settings changed.\n{\n:local nwId [/system script find where name="netwatch-collect"]\n:if ([:len $nwId] != 1) do={ :error "Install NetWatch first" }\n:if ([/system script get $nwId comment] != "NetWatch read-only telemetry") do={ :error "Script not managed by NetWatch" }\n:local nwOld [/system script get $nwId source]\n:local nwStart [:find $nwOld "/tool fetch url="]\n:if ([:typeof $nwStart] != "num") do={ :error "Cannot locate existing connection settings" }\n:local nwEnd [:find $nwOld " http-data=" $nwStart]\n:if ([:typeof $nwEnd] != "num") do={ :error "Cannot locate existing connection settings" }\n:local nwConfig [:pick $nwOld $nwStart $nwEnd]\n:local nwTemplate ${template}\n:local nwMarker "__NW_FETCH_CONFIG__"\n:local nwPos [:find $nwTemplate $nwMarker]\n:local nwNew ([:pick $nwTemplate 0 $nwPos].$nwConfig.[:pick $nwTemplate ($nwPos + [:len $nwMarker]) [:len $nwTemplate]])\n:local nwCompiled [:parse $nwNew]\n:local nwSchedule [/system scheduler find where name="netwatch-upload"]\n:if ([:len $nwSchedule] != 1) do={ :error "NetWatch scheduler missing" }\n:if ([/system scheduler get $nwSchedule comment] != "NetWatch HTTPS telemetry every 30 seconds") do={ :error "Scheduler not managed by NetWatch" }\n/system scheduler disable $nwSchedule\n/system script set $nwId source=$nwNew policy=read,test\n:global netwatchTick 0\n/system scheduler set $nwSchedule interval=${mode==='pppoe'?'60s':'30s'}\n/system scheduler enable $nwSchedule\n:put "NetWatch v4 updated. Existing keys preserved. Wait 1-2 minutes for ping results."\n}\n`;
+ return `# NetWatch v4 upgrade - keeps existing keys on this router.\n# Updates only the NetWatch script. No network settings changed.\n{\n:local nwId [/system script find where name="netwatch-collect"]\n:if ([:len $nwId] != 1) do={ :error "Install NetWatch first" }\n:if ([/system script get $nwId comment] != "NetWatch read-only telemetry") do={ :error "Script not managed by NetWatch" }\n:local nwOld [/system script get $nwId source]\n:local nwStart [:find $nwOld "/tool fetch url="]\n:if ([:typeof $nwStart] != "num") do={ :error "Cannot locate existing connection settings" }\n:local nwEnd [:find $nwOld " http-data=" $nwStart]\n:if ([:typeof $nwEnd] != "num") do={ :error "Cannot locate existing connection settings" }\n:local nwConfig [:pick $nwOld $nwStart $nwEnd]\n:local nwTemplate ${template}\n:local nwMarker "__NW_FETCH_CONFIG__"\n:local nwPos [:find $nwTemplate $nwMarker]\n:local nwNew ([:pick $nwTemplate 0 $nwPos].$nwConfig.[:pick $nwTemplate ($nwPos + [:len $nwMarker]) [:len $nwTemplate]])\n:local nwTlsMarker "__NW_TLS_OPTIONS__"\n:local nwTlsPos [:find $nwNew $nwTlsMarker]\n:local nwTlsOptions ""\n:if ([:typeof [:find $nwConfig "https://"]] = "num") do={ :set nwTlsOptions " check-certificate=yes" }\n:set nwNew ([:pick $nwNew 0 $nwTlsPos].$nwTlsOptions.[:pick $nwNew ($nwTlsPos + [:len $nwTlsMarker]) [:len $nwNew]])\n:local nwCompiled [:parse $nwNew]\n:local nwSchedule [/system scheduler find where name="netwatch-upload"]\n:if ([:len $nwSchedule] != 1) do={ :error "NetWatch scheduler missing" }\n:if ([/system scheduler get $nwSchedule comment] != "NetWatch HTTPS telemetry every 30 seconds") do={ :error "Scheduler not managed by NetWatch" }\n/system scheduler disable $nwSchedule\n/system script set $nwId source=$nwNew policy=read,test\n:global netwatchTick 0\n/system scheduler set $nwSchedule interval=${mode==='pppoe'?'60s':'30s'}\n/system scheduler enable $nwSchedule\n:put "NetWatch v4 updated. Existing keys preserved. Wait 1-2 minutes for ping results."\n}\n`;
 }
 
 export const uninstall=`/system scheduler remove [find where name="netwatch-upload"]\n/system script remove [find where name="netwatch-collect"]`;
