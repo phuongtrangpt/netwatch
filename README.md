@@ -36,7 +36,7 @@ packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.2`, gồm `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.3`, gồm `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Dockerfile mặc định `node:20-alpine` theo yêu cầu ban đầu. Node 20 đã EOL; có thể đổi
 NODE_IMAGE sang LTS còn hỗ trợ sau khi kiểm tra manifest và tương thích hai kiến trúc.
@@ -46,17 +46,13 @@ CI chạy kiểm tra mã và khởi động thử hai image bằng QEMU; thử t
 
 [Docker, backup và chuyển dữ liệu](docs/DOCKER.md)
 
-## Tài khoản chỉ xem (từ 1.0.2)
+## Phân quyền Viewer và banner hỗ trợ (từ 1.0.3)
 
-- Quản trị đăng nhập tên **admin**, dùng mật khẩu quản trị đã đặt trước đây. Phiên
-  quản trị đang dùng và database cũ vẫn được giữ khi cập nhật.
-- Trong **Cấu hình giám sát → Tài khoản chỉ xem**, bật tài khoản, đặt tên (mặc định
-  `view`) và mật khẩu riêng ít nhất 12 ký tự rồi Lưu tài khoản.
-- Người xem mở cùng địa chỉ web, nhập tên/mật khẩu này. Xem được tất cả dự án,
-  biểu đồ, WAN/LAN/VLAN, thiết bị, PPPoE, nhật ký và sơ đồ; vẫn tìm kiếm, chọn dự án,
-  phóng to và toàn màn hình. Không thêm/sửa/xóa, kéo thiết bị, lưu cấu hình,
-  thay dây hoặc tải bộ cài/khóa router. API cũng kiểm tra quyền, không chỉ ẩn nút.
-- Đổi tên/mật khẩu hoặc tắt tài khoản sẽ thu hồi các phiên xem đang có. Để trống
-  mật khẩu khi lưu nếu muốn giữ mật khẩu hiện tại.
-- Cấu hình tài khoản xem lưu trong `/data/viewer.json` dưới dạng hash mật khẩu;
-  được giữ cùng volume/backup, không commit file này lên GitHub.
+- Admin mở **Cấu hình giám sát → Quản lý tài khoản xem** để tạo nhiều Viewer. Mỗi tài khoản chọn dự án và từng mục được phép xem (Tổng quan, Sơ đồ mạng, WAN, LAN, Thiết bị, Cổng, Định tuyến, PPPoE, Sự kiện).
+- Các dự án và mục không được cấp quyền bị ẩn trên giao diện **và bị chặn ở API**. Viewer không tạo khóa router, thay đổi sơ đồ hoặc chỉnh cấu hình.
+- Admin mở **Cấu hình giám sát → Banner hỗ trợ kỹ thuật** để chỉnh tên KTV, số điện thoại, Facebook, nội dung, vị trí trên/dưới và hiển thị cho mọi người hoặc chỉ Viewer.
+- Trang đăng nhập responsive có thông tin sử dụng miễn phí, số điện thoại và link Facebook hỗ trợ.
+- Đăng nhập qua HTTPS reverse proxy được hỗ trợ thông qua Fetch Metadata của trình duyệt; với proxy đặc biệt có thể cấu hình `NETWATCH_PUBLIC_URL`, hoặc `NETWATCH_ALLOWED_ORIGINS` là danh sách origin được phép, cách nhau dấu phẩy. Chỉ bật `NETWATCH_TRUST_PROXY=true` nếu máy chủ đứng sau proxy đáng tin cậy đã ghi đè các header `X-Forwarded-Host` và `X-Forwarded-Proto`.
+- Nâng cấp giữ dữ liệu cũ trong `/data`. Tài khoản Viewer cũ vẫn hoạt động và ban đầu giữ quyền xem mọi dự án, mọi mục cho tương thích; hãy vào Admin chỉnh lại phạm vi trước khi chia sẻ.
+- Trước khi cập nhật Add-on, tạo bản backup dữ liệu. Không chia sẻ `/data` hoặc token thu thập router.
+
