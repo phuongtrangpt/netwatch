@@ -1,0 +1,16 @@
+node_modules
+dist/
+.test-dist/
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.db-*
+auth.json
+options.json
+netwatch-cloud-export.json
+*.tar
+*.zip
+*.backup
+.DS_Store

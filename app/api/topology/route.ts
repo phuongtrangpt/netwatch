@@ -1,0 +1,15 @@
+import {projectId,scopedKey,findProject} from '../../../lib/projects';
+import {database,browserUser,sameOrigin,json} from '../../../lib/server';
+import {validateAnchors} from '../../../lib/wire-routing';
+import {validateDevices} from '../../../lib/topology';
+export async function POST(req:Request){
+ if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);if(!sameOrigin(req))return json({error:'Invalid origin'},403);
+ try{const raw=await req.text();if(raw.length>40000)return json({error:'Dữ liệu quá lớn'},413);const body=JSON.parse(raw);const error=validateDevices(body.devices);if(error)return json({error},400);
+ const devices=body.devices.map((d:any)=>({id:d.id,ip:d.ip,name:d.name.trim(),type:d.type,parentId:d.parentId,enabled:d.enabled,pinned:d.pinned!==false,virtual:d.virtual===true}));
+ const db=database(),id=projectId(req);if(!await findProject(db,id))return json({error:"Không tìm thấy dự án"},404);const key=scopedKey(id,"topology");const row:any=await db.prepare("SELECT value FROM settings WHERE key=?").bind(key).first();const old=row?JSON.parse(row.value):{revision:0};if(body.revision!==old.revision)return json({error:'Danh sách vừa thay đổi ở phiên khác. Làm mới rồi thử lại.'},409);
+ const positions=body.positions??old.positions??{};if(!positions||typeof positions!=='object'||Array.isArray(positions)||Object.keys(positions).length>100)return json({error:'Vị trí không hợp lệ'},400);for(const [key,pos] of Object.entries(positions) as [string,any][]){if(key.length>150||!pos||!Number.isFinite(pos.x)||!Number.isFinite(pos.y)||pos.x<0||pos.y<0||pos.x>100000||pos.y>100000)return json({error:'Vị trí không hợp lệ'},400);}
+ const wireWaypoints=body.wireWaypoints??old.wireWaypoints??{};if(!wireWaypoints||typeof wireWaypoints!=='object'||Array.isArray(wireWaypoints)||Object.keys(wireWaypoints).length>100)return json({error:'Đường dây không hợp lệ'},400);for(const [key,points] of Object.entries(wireWaypoints) as [string,any][]){if(!/^edge-[a-zA-Z0-9:._-]{1,150}$/.test(key)||!Array.isArray(points)||points.length>12||points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.y<0||p.x>100000||p.y>100000))return json({error:'Điểm uốn không hợp lệ'},400);}
+ const wireAnchors=body.wireAnchors??old.wireAnchors??{};const anchorError=validateAnchors(wireAnchors);if(anchorError)return json({error:anchorError},400);
+ const value={schemaVersion:7,layoutVersion:4,routingMode:'smart',layoutMode:body.layoutMode==='manual'?'manual':'automatic',positions,wireWaypoints,wireAnchors,revision:old.revision+1,devices,updatedAt:Date.now()};const saved=await db.prepare("INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE settings.value=?").bind(key,JSON.stringify(value),row?.value||'').run();if(!saved.meta.changes)return json({error:'Danh sách vừa thay đổi. Làm mới rồi thử lại.'},409);return json(value);
+ }catch{return json({error:'Không lưu được danh sách theo dõi'},500);}
+}

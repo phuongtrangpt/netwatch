@@ -1,0 +1,24 @@
+name: NetWatch Local
+version: "1.0.0"
+slug: netwatch_local
+description: Giám sát MikroTik RB5009 và E50UG, lưu dữ liệu cục bộ
+arch:
+  - aarch64
+  - armv7
+startup: application
+boot: auto
+init: false
+# Supervisor uses the version above as the image tag.
+image: ghcr.io/phuongtrangpt/netwatch
+ports:
+  8080/tcp: 8080
+ports_description:
+  8080/tcp: Web NetWatch và API nhận dữ liệu từ MikroTik
+webui: http://[HOST]:[PORT:8080]
+watchdog: http://[HOST]:[PORT:8080]/healthz
+options:
+  password: ""
+  ingest_url: "http://192.168.1.50:8080"
+schema:
+  password: password
+  ingest_url: url

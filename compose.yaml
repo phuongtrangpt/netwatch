@@ -1,0 +1,18 @@
+services:
+  netwatch:
+    image: ${NETWATCH_IMAGE:-netwatch:1.0.0}
+    container_name: netwatch
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - my-netmon-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+volumes:
+  my-netmon-data:
+    name: my-netmon-data
