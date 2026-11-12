@@ -5,7 +5,7 @@ export default function ViewerAccount({projects=[]}:{projects?:any[]}){
  const [users,setUsers]=useState<any[]>([]),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[enabled,setEnabled]=useState(true),[permissions,setPermissions]=useState<Record<string,string[]>>({}),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const load=()=>fetch('/api/viewer').then(r=>r.json()).then(d=>setUsers(Array.isArray(d)?d:[])).catch(()=>setMessage('Không đọc được tài khoản.'));
  useEffect(()=>{load();},[]);
- const edit=(u:any)=>{setUsername(u.username);setPassword('');setEnabled(u.enabled);setPermissions(u.permissions||{});setMessage('');};
+ const edit=(u:any)=>{setUsername(u.username);setPassword('');setEnabled(u.enabled);setPermissions(u.permissions?.['*']?Object.fromEntries(projects.map(p=>[p.id,[...u.permissions['*']]])):(u.permissions||{}));setMessage('');};
  const toggle=(id:string,key:string,checked:boolean)=>setPermissions(p=>({...p,[id]:checked?[...new Set([...(p[id]||[]),key])]: (p[id]||[]).filter(x=>x!==key)}));
  async function save(e:any){e.preventDefault();setBusy(true);setMessage('');try{const r=await fetch('/api/viewer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,enabled,permissions})});const d=await r.json();if(!r.ok)throw Error(d.error);setUsers(d);setPassword('');setMessage('Đã lưu quyền. Các phiên cũ của tài khoản được đăng xuất.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
  async function remove(name:string){if(!confirm('Xóa tài khoản '+name+'?'))return;const r=await fetch('/api/viewer?username='+encodeURIComponent(name),{method:'DELETE'});if(r.ok){setUsers(await r.json());setMessage('Đã xóa tài khoản.');}}
