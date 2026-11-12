@@ -1,9 +1,9 @@
 import {useState,useEffect} from 'react';
-import {Headset,Phone,Facebook,Save} from 'lucide-react';
+import {Headset,Phone,ExternalLink,Save} from 'lucide-react';
 export type Support={enabled:boolean;title:string;message:string;name:string;phone:string;facebook:string;position:'top'|'bottom';audience:'all'|'viewer'};
 export function SupportBanner({info,role}:{info:Support|null;role?:string}){
  if(!info?.enabled||(info.audience==='viewer'&&role!=='viewer'))return null;
- return <section className="support-banner"><div className="support-details"><Headset size={22}/><div><strong>{info.title}</strong><p>{info.message}</p><span>KTV: {info.name} · {info.phone}</span></div></div><div className="support-actions">{info.phone&&<a className="button primary" href={'tel:'+info.phone.replace(/[^0-9+]/g,'')}><Phone size={15}/>Gọi kỹ thuật viên</a>}{info.facebook&&<a className="button secondary" href={info.facebook} target="_blank" rel="noopener noreferrer"><Facebook size={15}/>Facebook</a>}</div></section>;
+ return <section className="support-banner"><div className="support-details"><Headset size={22}/><div><strong>{info.title}</strong><p>{info.message}</p><span>KTV: {info.name} · {info.phone}</span></div></div><div className="support-actions">{info.phone&&<a className="button primary" href={'tel:'+info.phone.replace(/[^0-9+]/g,'')}><Phone size={15}/>Gọi kỹ thuật viên</a>}{info.facebook&&<a className="button secondary" href={info.facebook} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/>Facebook</a>}</div></section>;
 }
 export default function SupportSettings({onSaved}:{onSaved:(value:Support)=>void}){
  const [value,setValue]=useState<Support>({enabled:true,title:'HỖ TRỢ KỸ THUẬT',message:'Nếu gặp sự cố kỹ thuật, vui lòng liên hệ kỹ thuật viên.',name:'Việt Phương',phone:'0963839369',facebook:'https://www.facebook.com/leviethoaiphuong/',position:'top',audience:'all'}),[status,setStatus]=useState('');
