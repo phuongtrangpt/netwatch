@@ -110,11 +110,13 @@ const server=createServer(async(req,res)=>{
     data.sections=Object.fromEntries(Object.entries(data.sections||{}).filter(([key])=>(sectionsByModule[module]||[]).includes(key)));
     if(module!=='events'&&module!=='overview')data.events=[];
     if(module!=='overview'&&module!=='wan')data.history=[];
-    if(module!=='topology'&&module!=='overview')data.topology={devices:[]};
+    if(module!=='topology')data.topology={devices:[]};
     if(module!=='clients'&&module!=='overview')data.clients=[];
     if(module!=='topology'&&module!=='overview')data.discovered=[];
     if(module==='events')data.sections={};
-    if(module==='topology'){data.sections={};data.clients=[];data.history=[];data.events=[];data.discovered=[];data.metrics=null;data.rates={};data.probes={};data.config={};}
+    if(module==='topology'){data.sections={};data.clients=[];data.history=[];data.events=[];data.discovered=[];data.rates={};data.config={};}
+    if(module==='events'){data.metrics=null;data.rates={};data.config={};data.wanNames=[];data.clients=[];data.discovered=[];data.probes={};}
+    if(module==='routes'){data.clients=[];data.discovered=[];data.probes={};}
     payload=Buffer.from(JSON.stringify(data));
    }
    res.writeHead(result.status,Object.fromEntries(result.headers.entries()));res.end(payload);return;
