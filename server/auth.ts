@@ -77,7 +77,7 @@ form{background:linear-gradient(160deg,#142c49f5,#0a1e36f5);border:1px solid #3d
 h1{font-size:29px;letter-spacing:-.045em;margin:0}form .sub{font-size:14px;color:#afc7dd;line-height:1.5;margin:14px 0 24px}
 label{display:block;font-size:13px;color:#cbdcf0;font-weight:650;margin:15px 0}
 input{width:100%;margin-top:8px;height:47px;border:1px solid #41617d;border-radius:11px;padding:0 13px;background:#081b30;color:white;font:inherit;outline:0}
-input:focus{border-color:#60c5ff;box-shadow:0 0 0 3px #2c95e22c}button{width:100%;margin-top:15px;border:0;border-radius:11px;background:linear-gradient(105deg,#3c9de9,#3164e2);box-shadow:0 8px 22px #1676dd30;color:#fff;font:700 15px inherit;min-height:48px;cursor:pointer}button:hover{filter:brightness(1.11)}
+input:focus{border-color:#60c5ff;box-shadow:0 0 0 3px #2c95e22c}button{width:100%;margin-top:15px;border:0;border-radius:11px;background:linear-gradient(105deg,#3c9de9,#3164e2);box-shadow:0 8px 22px #1676dd30;color:#fff;font-family:inherit;font-weight:700;font-size:15px;min-height:48px;cursor:pointer}button:hover{filter:brightness(1.11)}
 .form-note{font-size:12px;text-align:center;color:#a9c5da;margin:18px 0 0}a{color:#85d3ff;text-decoration:none}a:hover{text-decoration:underline}
 footer{position:relative;text-align:center;padding:20px 20px 28px;border-top:1px solid #28445b;color:#a9bed0;font-size:12px;line-height:2}footer a{overflow-wrap:anywhere}
 @media(max-width:780px){main{grid-template-columns:1fr;gap:25px;padding:25px 16px}.hero h2{font-size:30px;margin:10px 0}.hero p{font-size:14px}.features{margin-top:16px}.hero .eyebrow{font-size:10px}form{max-width:480px;width:100%;margin:0 auto}footer{font-size:11px;padding:12px 14px 18px}}
