@@ -16,3 +16,4 @@ netwatch-cloud-export.json
 .DS_Store
 viewer.json
 viewer.json.tmp
+artifacts/

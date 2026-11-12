@@ -28,7 +28,12 @@ Công cụ xuất/nhập cấu hình có trong scripts; cần thao tác riêng k
 
 ## Chia sẻ quyền xem
 
-Từ 1.0.2, chủ web đăng nhập `admin` với mật khẩu hiện có, vào Cấu hình giám sát →
-Tài khoản chỉ xem. Bật và đặt tên/mật khẩu riêng để chia sẻ. Tài khoản này đọc được
-mọi dự án, không chỉnh sửa, không nhận bộ cài router. Có thể tắt/đổi mật khẩu trên
-web để thu hồi phiên xem. Không phải sửa Configuration của add-on để tạo viewer.
+Từ 1.0.3, đăng nhập `admin`, vào **Cấu hình giám sát → Tài khoản chỉ xem →
+Thêm tài khoản**. Đặt tên, mật khẩu ít nhất 12 ký tự và tích dự án và từng mục giám sát được phép xem.
+Có thể tạo nhiều tài khoản cho các chủ nhà; mỗi người chỉ thấy các dự án đã chọn,
+không chỉnh sửa hoặc nhận bộ cài/khóa router. API cũng kiểm tra phạm vi dự án.
+
+Dự án mới không tự chia sẻ. Sửa quyền, đổi mật khẩu, tắt hoặc xóa tài khoản sẽ
+thu hồi phiên của riêng tài khoản đó. Để trống mật khẩu khi sửa để giữ mật khẩu cũ.
+Quản trị viên cũng có thể cấu hình banner liên hệ kỹ thuật trong trang **Cấu hình giám sát**. Không cần sửa Configuration của add-on. Tài khoản xem cũ giữ quyền trên những dự án
+đang có tại lần nâng cấp đầu tiên; hãy sửa quyền trước khi chia sẻ cho người khác.

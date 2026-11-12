@@ -36,7 +36,7 @@ packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.2`, gồm `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.3`, gồm `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Dockerfile mặc định `node:20-alpine` theo yêu cầu ban đầu. Node 20 đã EOL; có thể đổi
 NODE_IMAGE sang LTS còn hỗ trợ sau khi kiểm tra manifest và tương thích hai kiến trúc.
@@ -46,17 +46,26 @@ CI chạy kiểm tra mã và khởi động thử hai image bằng QEMU; thử t
 
 [Docker, backup và chuyển dữ liệu](docs/DOCKER.md)
 
-## Tài khoản chỉ xem (từ 1.0.2)
+## Nhiều tài khoản chỉ xem và phân quyền dự án (1.0.3)
 
-- Quản trị đăng nhập tên **admin**, dùng mật khẩu quản trị đã đặt trước đây. Phiên
-  quản trị đang dùng và database cũ vẫn được giữ khi cập nhật.
-- Trong **Cấu hình giám sát → Tài khoản chỉ xem**, bật tài khoản, đặt tên (mặc định
-  `view`) và mật khẩu riêng ít nhất 12 ký tự rồi Lưu tài khoản.
-- Người xem mở cùng địa chỉ web, nhập tên/mật khẩu này. Xem được tất cả dự án,
-  biểu đồ, WAN/LAN/VLAN, thiết bị, PPPoE, nhật ký và sơ đồ; vẫn tìm kiếm, chọn dự án,
-  phóng to và toàn màn hình. Không thêm/sửa/xóa, kéo thiết bị, lưu cấu hình,
-  thay dây hoặc tải bộ cài/khóa router. API cũng kiểm tra quyền, không chỉ ẩn nút.
-- Đổi tên/mật khẩu hoặc tắt tài khoản sẽ thu hồi các phiên xem đang có. Để trống
-  mật khẩu khi lưu nếu muốn giữ mật khẩu hiện tại.
-- Cấu hình tài khoản xem lưu trong `/data/viewer.json` dưới dạng hash mật khẩu;
-  được giữ cùng volume/backup, không commit file này lên GitHub.
+- Đăng nhập **admin**, vào **Cấu hình giám sát → Tài khoản chỉ xem → Thêm tài khoản**.
+- Đặt tên đăng nhập, mật khẩu riêng ít nhất 12 ký tự và tích các dự án muốn chia sẻ.
+- Mỗi người xem đăng nhập cùng địa chỉ web; chỉ thấy danh sách và dữ liệu của những
+  dự án được cấp. Xem đầy đủ các mục, tìm kiếm, phóng to sơ đồ và toàn màn hình;
+  không thêm/sửa/xóa, kéo thiết bị, đổi dây, lưu cấu hình hoặc nhận khóa/bộ cài router.
+- API kiểm tra quyền trên từng dự án, kể cả khi tự sửa URL. Dự án mới tạo không tự
+  cấp cho tài khoản xem; quản trị viên phải chọn thêm.
+- Có thể sửa quyền, đổi mật khẩu, tắt hoặc xóa từng tài khoản. Mọi phiên của tài khoản
+  vừa thay đổi hết hiệu lực; các tài khoản khác vẫn hoạt động. Khi sửa, để trống mật
+  khẩu để giữ mật khẩu hiện tại.
+- Tài khoản xem cũ từ 1.0.2 giữ mật khẩu và quyền trên các dự án hiện có tại lần
+  nâng cấp đầu tiên. Hãy mở **Sửa quyền** để giới hạn trước khi chia sẻ cho chủ nhà.
+- Dữ liệu quản trị, dự án và sơ đồ cũ được giữ. Danh sách tài khoản và hash mật khẩu
+  nằm trong `/data/viewer.json`, được giữ cùng volume/backup; không commit file này.
+
+## Giao diện và hỗ trợ kỹ thuật (1.0.3)
+
+Trang đăng nhập dùng logo gốc và nền công nghệ nhẹ, hỗ trợ điện thoại. Cả trang đăng nhập
+và dashboard có liên hệ bấm được: 0963839369, https://www.facebook.com/leviethoaiphuong/,
+bản quyền Việt Phương và thông báo sử dụng miễn phí. Quản trị viên có thể bật banner hỗ trợ, nhập tên/số kỹ thuật viên và chọn vị trí hiển thị. Logo được phục vụ trước đăng nhập;
+các API giám sát vẫn yêu cầu tài khoản và kiểm tra quyền như trước.

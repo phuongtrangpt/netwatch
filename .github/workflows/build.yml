@@ -34,6 +34,18 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npm test
+      - name: Cài trình duyệt kiểm tra giao diện
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Kiểm tra đăng nhập và giao diện máy tính/điện thoại
+        run: node scripts/browser-brand-check.mjs
+      - name: Lưu ảnh kiểm tra giao diện
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: netwatch-ui-preview
+          path: artifacts/ui/
+          if-no-files-found: ignore
+          retention-days: 7
   publish:
     needs: check
     if: needs.check.outputs.publish == 'true' && github.repository == 'phuongtrangpt/netwatch'

@@ -1,5 +1,5 @@
 import {discoveredInventory} from '../../../lib/discovery';
-import {database,browserUser,json} from '../../../lib/server';
+import {database,browserUser,json,allowedViews} from '../../../lib/server';
 import {clients,rates,wanNames,SECTIONS} from '../../../lib/core';
 import {projectId,scopedKey,findProject} from '../../../lib/projects';
 export async function GET(req:Request){
@@ -13,6 +13,17 @@ export async function GET(req:Request){
  const settings:any=await db.prepare('SELECT key,value FROM settings WHERE key IN (?,?,?,?)').bind(...['wan','topology','probe_latest','discovery'].map(k=>scopedKey(id,k))).all();const get=(k:string,f:any)=>{const r=settings.results.find((r:any)=>r.key===scopedKey(id,k));return r?JSON.parse(r.value):f;};
  const config=get('wan',{wans:[],aliases:{},manual:false}),topology=get('topology',{revision:0,devices:[]}),probes=get('probe_latest',{results:[]});const metrics=router?.metrics?JSON.parse(router.metrics):null;
  const discovery=get('discovery',null);const discovered=discoveredInventory(sections,updated,(discovery?.devices||[]).filter((d:any)=>['DHCP','PPPoE'].includes(d.source)));
- return json({discovered,project,paired:!!router,pairedAt:router?.paired_at,lastSeen:router?.last_seen,metrics,rates:metrics?rates(metrics,router.previous?JSON.parse(router.previous):null,router.last_seen,router.previous_at):{},sections,updated,clients:clients(sections),wanNames:config.manual?config.wans:wanNames(sections),config,topology,probes,history:history.results.reverse().map((r:any)=>({at:r.minute,...JSON.parse(r.data)})),events:events.results,serverTime:Date.now()});
+ const permitted=allowedViews();if(!permitted)return json({discovered,project,paired:!!router,pairedAt:router?.paired_at,lastSeen:router?.last_seen,metrics,rates:metrics?rates(metrics,router.previous?JSON.parse(router.previous):null,router.last_seen,router.previous_at):{},sections,updated,clients:clients(sections),wanNames:config.manual?config.wans:wanNames(sections),config,topology,probes,history:history.results.reverse().map((r:any)=>({at:r.minute,...JSON.parse(r.data)})),events:events.results,serverTime:Date.now()});
+ const has=(...ids:string[])=>ids.some(id=>permitted.includes(id));
+ const sectionViews:Record<string,string[]>={interfaces:['overview','wan','ports'],bridges:['overview','lan'],vlans:['overview','lan'],bridgeports:['lan'],bridgevlans:['lan'],dhcpservers:['overview','lan'],pools:['lan'],addresses:['overview','lan','wan'],dhcpclients:['clients','topology','wan'],leases:['clients','topology'],arp:['clients','topology'],hosts:['clients','topology'],wanmembers:['wan'],pppoe:['pppoe'],pppactive:['pppoe'],pppaccounts:['pppoe'],pppprofiles:['pppoe'],pppservers:['pppoe'],routes:['routes'],health:['overview'],resources:['overview']};
+ const visibleSections=Object.fromEntries(Object.entries(sections).filter(([key])=>(sectionViews[key]||[]).some(id=>permitted.includes(id))));
+ const visibleUpdated=Object.fromEntries(Object.entries(updated).filter(([key])=>key in visibleSections));
+ const payload:any={project,paired:!!router,pairedAt:router?.paired_at,lastSeen:router?.last_seen,sections:visibleSections,updated:visibleUpdated,serverTime:Date.now()};
+ if(has('overview')){payload.metrics=metrics;payload.history=history.results.reverse().map((r:any)=>({at:r.minute,...JSON.parse(r.data)}));payload.clientCount=clients(sections).length;payload.wanNames=config.manual?config.wans:wanNames(visibleSections);payload.config=config;payload.rates=metrics?rates(metrics,router.previous?JSON.parse(router.previous):null,router.last_seen,router.previous_at):{};}
+ else{if(has('wan')){payload.wanNames=config.manual?config.wans:wanNames(visibleSections);payload.config=config;}if(has('ports','wan'))payload.rates=metrics?rates(metrics,router.previous?JSON.parse(router.previous):null,router.last_seen,router.previous_at):{};if(has('ports'))payload.metrics={identity:metrics?.identity,stats:metrics?.stats};}
+ if(has('topology')){payload.topology=topology;payload.probes=probes;payload.discovered=discovered;payload.clients=clients(visibleSections);}
+ if(has('clients')&&!has('topology'))payload.clients=clients(visibleSections);
+ if(has('events'))payload.events=events.results;
+ return json(payload);
  }catch{return json({error:'Chưa đọc được dữ liệu. Vui lòng thử lại.'},503);}
 }

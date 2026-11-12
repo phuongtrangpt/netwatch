@@ -1,6 +1,6 @@
-import {database,browserUser,sameOrigin,json} from '../../../lib/server';
+import {database,browserUser,sameOrigin,json,allowedProjects} from '../../../lib/server';
 import {projectList,validProjectId,findProject} from '../../../lib/projects';
-export async function GET(){if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);try{return json({projects:await projectList(database())});}catch{return json({error:'Không đọc được danh sách dự án'},503);}}
+export async function GET(){if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);try{const rows=await projectList(database()),allowed=allowedProjects();return json({projects:allowed?rows.filter((p:any)=>allowed.includes(p.id)):rows});}catch{return json({error:'Không đọc được danh sách dự án'},503);}}
 export async function POST(req:Request){
  if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);if(!sameOrigin(req))return json({error:'Invalid origin'},403);
  try{const b:any=await req.json();if(typeof b.name!=='string'||!b.name.trim()||b.name.length>70||!['E50UG','RB5009','Khác'].includes(b.model)||!['infrastructure','pppoe'].includes(b.mode))return json({error:'Kiểm tra tên và loại dự án'},400);const db=database();let id=b.id;
