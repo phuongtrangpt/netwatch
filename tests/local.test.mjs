@@ -16,7 +16,7 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   await start();
   assert.equal((await fetch(origin+'/api/dashboard',{headers:{'oai-authenticated-user-id':'fake'}})).status,401);
   assert.equal((await fetch(origin+'/api/ingest',{method:'POST',body:'{}'})).status,401);
-  let r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(r.status,303);const cookie=r.headers.get('set-cookie').split(';')[0];
+  let r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(r.status,303,output);const cookie=r.headers.get('set-cookie').split(';')[0];
   const headers={origin,cookie,'Content-Type':'application/json'};
   const api=(path,body,extra={})=>fetch(origin+path,{method:body?'POST':'GET',headers:{...headers,...extra},...(body?{body:JSON.stringify(body)}:{})});
   r=await api('/api/dashboard');assert.equal(r.status,200);assert.equal((await r.json()).paired,false);
@@ -56,29 +56,43 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
  async function login(username,password){const r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password}),redirect:'manual'});return {status:r.status,cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  function api(path,cookie,body,extra={}){return fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie:cookie||'','Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});}
  try{
-  await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303);
-  let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),{enabled:false,username:'view'});
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123'});assert.equal(r.status,200);
+  await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303,output);
+  let proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
+  assert.equal(proxyLogin.status,303,'Same-origin mobile form behind reverse proxy must be accepted');
+  proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://attacker.example.test','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
+  assert.equal(proxyLogin.status,403,'Cross-origin login must be rejected');
+  let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),[]);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
   const viewer=await login('view','viewer-password-123');assert.equal(viewer.status,303);
-  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{role:'viewer',username:'view'});
+  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
   r=await api('/api/projects',admin.cookie,{name:'Nhà trọ',model:'E50UG',mode:'pppoe'});const projects=await r.json();assert.equal(r.status,200);
   r=await api('/api/projects',viewer.cookie);assert.equal((await r.json()).projects.length,2);
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}
   for(const path of ['/api/projects','/api/topology','/api/config','/api/pair','/api/viewer','/api/future-write-route']){r=await api(path,viewer.cookie,{enabled:false}, {'oai-authenticated-user-id':'owner','x-role':'owner'});assert.equal(r.status,403,path);}
   for(const path of ['/api/upgrade','/api/viewer'])assert.equal((await api(path,viewer.cookie)).status,403,path);
-  const forged=viewer.cookie.replace(/viewer:[a-f0-9]+/,'owner');assert.equal((await api('/api/dashboard',forged)).status,401);
+  const forged=viewer.cookie.replace('viewer:view:','owner:');assert.equal((await api('/api/dashboard',forged)).status,401);
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
-  r=await api('/api/dashboard',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'another-password-123'},{origin:'http://wrong.test'});assert.equal(r.status,403);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'test-password-12345'});assert.equal(r.status,400);
-  const stored=readFileSync(join(data,'viewer.json'),'utf8');assert.ok(!stored.includes('viewer-password-123'));assert.ok(!JSON.stringify(await (await api('/api/viewer',admin.cookie)).json()).includes('hash'));
+  r=await api('/api/dashboard?module=topology',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
+  r=await api('/api/dashboard?module=overview',viewer.cookie);assert.equal((await r.json()).topology.devices.length,0);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'another-password-123',permissions:{'*':['overview','topology']}},{origin:'http://wrong.test'});assert.equal(r.status,403);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'test-password-12345',permissions:{'*':['overview','topology']}});assert.equal(r.status,400);
+  const stored=readFileSync(join(data,'viewers.json'),'utf8');assert.ok(!stored.includes('viewer-password-123'));assert.ok(!JSON.stringify(await (await api('/api/viewer',admin.cookie)).json()).includes('hash'));
   await stop();await start();assert.equal((await api('/api/dashboard',viewer.cookie)).status,200);assert.equal((await api('/api/session',admin.cookie)).status,200);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-456'});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',viewer.cookie)).status,401);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-456',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',viewer.cookie)).status,401);
   assert.equal((await login('view','viewer-password-123')).status,401);
   const newViewer=await login('view','viewer-password-456');assert.equal(newViewer.status,303);
-  r=await api('/api/viewer',admin.cookie,{enabled:false,username:'view',password:''});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',newViewer.cookie)).status,401);assert.equal((await login('view','viewer-password-456')).status,401);
+  r=await api('/api/viewer',admin.cookie,{enabled:false,username:'view',password:'',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',newViewer.cookie)).status,401);assert.equal((await login('view','viewer-password-456')).status,401);
   assert.equal((await api('/api/dashboard',admin.cookie)).status,200);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'tenant',password:'tenant-password-123',permissions:{main:['topology']}});assert.equal(r.status,200);
+  const tenant=await login('tenant','tenant-password-123');assert.equal(tenant.status,303);
+  r=await api('/api/projects',tenant.cookie);assert.deepEqual((await r.json()).projects.map(p=>p.id),['main']);
+  assert.equal((await api('/api/dashboard?project=main&module=overview',tenant.cookie)).status,403);
+  assert.equal((await api('/api/dashboard?project=main&module=topology',tenant.cookie)).status,200);
+  assert.equal((await api('/api/dashboard?project='+projects.projects.find(p=>p.id!=='main').id+'&module=topology',tenant.cookie)).status,403);
+  r=await api('/api/support',admin.cookie,{enabled:true,title:'Hỗ trợ kỹ thuật',message:'Gọi khi có sự cố',name:'Việt Phương',phone:'0963839369',facebook:'https://www.facebook.com/leviethoaiphuong/',position:'top',audience:'all'});assert.equal(r.status,200);
+  assert.equal((await (await api('/api/support',tenant.cookie)).json()).phone,'0963839369');
+  assert.equal((await api('/api/support',tenant.cookie,{enabled:false})).status,403);
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });

@@ -1,3 +1,11 @@
+# 1.0.3
+
+- Sửa đăng nhập điện thoại và proxy: xác thực Origin hỗ trợ yêu cầu same-origin hợp lệ mà không tắt CSRF.
+- Quản lý nhiều tài khoản Viewer; phân quyền độc lập cho từng dự án và từng chức năng, kiểm tra ở API.
+- Banner hỗ trợ kỹ thuật do Admin tự cấu hình (tên, số điện thoại, Facebook, nội dung, vị trí và đối tượng hiển thị).
+- Làm mới giao diện đăng nhập, bổ sung chân trang liên hệ, thông báo sử dụng miễn phí và tối ưu màn hình nhỏ.
+- Giữ dữ liệu NetWatch cũ trong /data; tự chuyển tài khoản Viewer 1.0.2 sang định dạng mới.
+
 # 1.0.2
 
 - Thêm một tài khoản chỉ xem, do quản trị viên tạo/đổi mật khẩu/bật tắt trên web.

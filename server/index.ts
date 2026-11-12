@@ -1,9 +1,10 @@
 import {createServer} from 'node:http';
+import {getSupport,saveSupport} from './support';
 import {readFile,stat} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {db,sqlite} from './database';
 import {requestContext} from '../lib/server';
-import {authenticated,checkLogin,session,loginHTML,accountName,viewerInfo,saveViewer} from './auth';
+import {authenticated,checkLogin,session,loginHTML,accountName,viewerInfo,saveViewer,removeViewer,canView,projectAccess,visiblePermissions} from './auth';
 import * as dashboard from '../app/api/dashboard/route';
 import * as projects from '../app/api/projects/route';
 import * as config from '../app/api/config/route';
@@ -14,6 +15,22 @@ import * as ingest from '../app/api/ingest/route';
 const routes:any={dashboard,projects,config,topology,pair,upgrade,ingest};
 const root=resolve('dist/public'),port=Number(process.env.PORT||8080);
 for(const name of ['NETWATCH_INGEST_URL','NETWATCH_PUBLIC_URL'])if(process.env[name]){const u=new URL(process.env[name]!);if(!['http:','https:'].includes(u.protocol)||u.pathname!=='/'||u.search||u.hash||u.username||u.password)throw Error(name+' phải là URL gốc http(s)://HOST:PORT, không có đường dẫn hay thông tin đăng nhập.');process.env[name]=u.origin;}
+const browserOrigin=(req:any,url:URL)=>{
+ const origin=req.headers.origin;if(typeof origin!=='string')return false;
+ // Fetch Metadata is set by modern browsers and survives HTTPS reverse proxies.
+ // A same-origin browser request is safe even when a proxy rewrites Host internally.
+ if(req.headers['sec-fetch-site']==='same-origin')return /^https?:\/\//.test(origin);
+ const allowed=new Set<string>();
+ if(process.env.NETWATCH_PUBLIC_URL)allowed.add(new URL(process.env.NETWATCH_PUBLIC_URL).origin);
+ for(const item of (process.env.NETWATCH_ALLOWED_ORIGINS||'').split(',')){if(item.trim())try{allowed.add(new URL(item.trim()).origin);}catch{}}
+ const host=req.headers.host;if(typeof host==='string')try{allowed.add(new URL((req.socket.encrypted?'https://':'http://')+host).origin);}catch{}
+ if(process.env.NETWATCH_TRUST_PROXY==='true'){
+  const forwarded=(req.headers['x-forwarded-host']||'').split(',')[0]?.trim();
+  const proto=(req.headers['x-forwarded-proto']||'').split(',')[0]?.trim();
+  if(forwarded&&['https','http'].includes(proto))try{allowed.add(new URL(proto+'://'+forwarded).origin);}catch{}
+ }
+ return allowed.has(origin);
+};
 const failures=new Map<string,{count:number,until:number}>();
 const server=createServer(async(req,res)=>{
  try{
@@ -22,13 +39,14 @@ const server=createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Cache-Control','no-store');
   if(path==='/healthz'&&method==='GET'){res.end('ok');return;}
   const auth=authenticated(req.headers.cookie||'');
+  const viewer=!!auth&&auth.startsWith('viewer:');
   const ingestRequest=path==='/api/ingest'&&method==='POST';
   if(!auth&&!ingestRequest&&path!=='/login'){
    if(path.startsWith('/api/')){res.writeHead(401,{'Content-Type':'application/json'});res.end('{"error":"Đăng nhập tại /login"}');}
    else{res.writeHead(302,{Location:'/login'});res.end();}return;
   }
   // Viewer access is an explicit read allowlist; router ingest has separate bearer authentication.
-  if(auth==='viewer'&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
+  if(viewer&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session','/api/support'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
   let body:Buffer|undefined;
   if(!['GET','HEAD'].includes(method)){
    const chunks:Buffer[]=[];let size=0;
@@ -37,7 +55,7 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/login'){
    if(method==='POST'){
-    if(req.headers.origin!==url.origin){res.writeHead(403);res.end('Invalid origin');return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end('Invalid origin');return;}
     const key=req.socket.remoteAddress||'local',now=Date.now(),f=failures.get(key);
     if(f&&f.until>now&&f.count>=5){res.writeHead(429);res.end('Chờ 5 phút rồi thử lại.');return;}
     const form=new URLSearchParams(body?.toString()),password=form.get('password')||'',username=form.get('username')||'';
@@ -53,21 +71,55 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
-   if(path==='/api/session'&&method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:auth,username:auth?accountName(auth):null}));return;}
+   if(path==='/api/session'&&method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/support'){
+    res.setHeader('Content-Type','application/json');
+    if(method==='GET'){const value=getSupport();res.end(JSON.stringify(value));return;}
+    if(auth!=='owner'){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ Admin được thay đổi banner.'}));return;}
+    if(method!=='POST'){res.writeHead(405);res.end();return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    try{res.end(JSON.stringify(saveSupport(JSON.parse((body||Buffer.alloc(0)).toString()))));}
+    catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Cấu hình không hợp lệ'}));}return;
+   }
    if(path==='/api/viewer'){
     if(auth!=='owner'){res.writeHead(403);res.end();return;}
     res.setHeader('Content-Type','application/json');
     if(method==='GET'){res.end(JSON.stringify(viewerInfo()));return;}
+    if(method==='DELETE'){if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}res.end(JSON.stringify(removeViewer(url.searchParams.get('username')||'')));return;}
     if(method!=='POST'){res.writeHead(405);res.end();return;}
-    if(req.headers.origin!==url.origin){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
     if(!body||body.length>4096){res.writeHead(413);res.end();return;}
     try{res.end(JSON.stringify(saveViewer(JSON.parse(body.toString()))));}catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Không lưu được tài khoản.'}));}return;
    }
+   if(viewer&&['/api/projects','/api/dashboard'].includes(path)&&method==='GET'&&path==='/api/dashboard'){
+    const id=url.searchParams.get('project')||'main',module=url.searchParams.get('module')||'overview';
+    if(!projectAccess(auth,id)||!['overview','topology','wan','lan','clients','ports','routes','pppoe','events'].includes(module)||!canView(auth,id,module as any)){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Bạn không được cấp quyền xem mục này.'}));return;}
+   }
+   if(!browserOrigin(req,url)&&!['GET','HEAD'].includes(method)&&!ingestRequest){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Invalid origin'}));return;}
    const handler=routes[path.slice(5)]?.[method];if(!handler){res.writeHead(404);res.end();return;}
    const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
    const request=new Request(url,{method,headers,...(body?{body}: {})});
-   const result:Response=await requestContext.run({authenticated:!!auth,role:auth||undefined},()=>handler(request));
-   res.writeHead(result.status,Object.fromEntries(result.headers.entries()));res.end(Buffer.from(await result.arrayBuffer()));return;
+   const result:Response=await requestContext.run({authenticated:!!auth,role:viewer?'viewer':'owner'},()=>handler(request));
+   let payload=Buffer.from(await result.arrayBuffer());
+   if(viewer&&method==='GET'&&result.ok&&path==='/api/projects'){
+    const data=JSON.parse(payload.toString());data.projects=data.projects.filter((p:any)=>projectAccess(auth,p.id));payload=Buffer.from(JSON.stringify(data));
+   }
+   if(viewer&&method==='GET'&&result.ok&&path==='/api/dashboard'){
+    const module=url.searchParams.get('module')||'overview',data=JSON.parse(payload.toString());
+    const sectionsByModule:any={overview:['interfaces','addresses','pppoe','dhcpclients'],topology:[],wan:['interfaces','addresses','pppoe','dhcpclients','routes'],lan:['interfaces','bridges','vlans','bridgeports','addresses'],clients:['leases','arp','pppoe','interfaces'],ports:['interfaces'],routes:['routes'],pppoe:['pppoe','pppoeactive','pppoesecrets','interfaces'],events:[]};
+    data.sections=Object.fromEntries(Object.entries(data.sections||{}).filter(([key])=>(sectionsByModule[module]||[]).includes(key)));
+    if(module!=='events'&&module!=='overview')data.events=[];
+    if(module!=='overview'&&module!=='wan')data.history=[];
+    if(module!=='topology')data.topology={devices:[]};
+    if(module!=='clients'&&module!=='overview')data.clients=[];
+    if(module!=='topology'&&module!=='overview')data.discovered=[];
+    if(module==='events')data.sections={};
+    if(module==='topology'){data.sections={};data.clients=[];data.history=[];data.events=[];data.discovered=[];data.rates={};data.config={};}
+    if(module==='events'){data.metrics=null;data.rates={};data.config={};data.wanNames=[];data.clients=[];data.discovered=[];data.probes={};}
+    if(module==='routes'){data.clients=[];data.discovered=[];data.probes={};}
+    payload=Buffer.from(JSON.stringify(data));
+   }
+   res.writeHead(result.status,Object.fromEntries(result.headers.entries()));res.end(payload);return;
   }
   if(!['GET','HEAD'].includes(method)){res.writeHead(405);res.end();return;}
   let file=resolve(root,'.'+decodeURIComponent(path));
