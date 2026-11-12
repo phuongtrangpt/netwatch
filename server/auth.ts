@@ -49,9 +49,9 @@ export function checkLogin(username:string,password:string):string|null{
 const signature=(payload:string)=>createHmac('sha256',credentials.key).update(payload).digest('hex');
 export function session(identity:string='owner'){const v=viewers.find(v=>'viewer:'+v.username===identity);const subject=identity==='owner'?'owner':v?'viewer:'+v.username+':'+v.revision:'invalid';const payload=`${subject}.${Date.now()+86400000}.${randomBytes(16).toString('hex')}`;return `${payload}.${signature(payload)}`;}
 export function authenticated(cookie:string):string|null{
- const token=/(?:^|;\\s*)netwatch=([^;]+)/.exec(cookie)?.[1];if(!token)return null;
+ const token=/(?:^|;\s*)netwatch=([^;]+)/.exec(cookie)?.[1];if(!token)return null;
  const parts=token.split('.');if(parts.length!==4)return null;const sig=parts.pop()!,payload=parts.join('.');
- if(!/^\\d+$/.test(parts[1])||+parts[1]<=Date.now()||!/^[a-f0-9]{64}$/.test(sig)||!timingSafeEqual(Buffer.from(sig,'hex'),Buffer.from(signature(payload),'hex')))return null;
+ if(!/^\d+$/.test(parts[1])||+parts[1]<=Date.now()||!/^[a-f0-9]{64}$/.test(sig)||!timingSafeEqual(Buffer.from(sig,'hex'),Buffer.from(signature(payload),'hex')))return null;
  if(parts[0]==='owner')return 'owner';
  const v=viewers.find(v=>v.enabled&&parts[0]==='viewer:'+v.username+':'+v.revision);return v?'viewer:'+v.username:null;
 }
