@@ -16,7 +16,7 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   await start();
   assert.equal((await fetch(origin+'/api/dashboard',{headers:{'oai-authenticated-user-id':'fake'}})).status,401);
   assert.equal((await fetch(origin+'/api/ingest',{method:'POST',body:'{}'})).status,401);
-  let r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(r.status,303);const cookie=r.headers.get('set-cookie').split(';')[0];
+  let r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(r.status,303,output);const cookie=r.headers.get('set-cookie').split(';')[0];
   const headers={origin,cookie,'Content-Type':'application/json'};
   const api=(path,body,extra={})=>fetch(origin+path,{method:body?'POST':'GET',headers:{...headers,...extra},...(body?{body:JSON.stringify(body)}:{})});
   r=await api('/api/dashboard');assert.equal(r.status,200);assert.equal((await r.json()).paired,false);
@@ -56,7 +56,7 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
  async function login(username,password){const r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password}),redirect:'manual'});return {status:r.status,cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  function api(path,cookie,body,extra={}){return fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie:cookie||'','Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});}
  try{
-  await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303);
+  await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303,output);
   let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),[]);
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
