@@ -57,11 +57,11 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
  function api(path,cookie,body,extra={}){return fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie:cookie||'','Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});}
  try{
   await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303);
-  let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),{enabled:false,username:'view'});
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123'});assert.equal(r.status,200);
+  let r=await api('/api/viewer',admin.cookie);assert.deepEqual(await r.json(),[]);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
   const viewer=await login('view','viewer-password-123');assert.equal(viewer.status,303);
-  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{role:'viewer',username:'view'});
+  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
   r=await api('/api/projects',admin.cookie,{name:'Nhà trọ',model:'E50UG',mode:'pppoe'});const projects=await r.json();assert.equal(r.status,200);
   r=await api('/api/projects',viewer.cookie);assert.equal((await r.json()).projects.length,2);
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}
@@ -71,14 +71,23 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
   r=await api('/api/dashboard',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'another-password-123'},{origin:'http://wrong.test'});assert.equal(r.status,403);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'test-password-12345'});assert.equal(r.status,400);
-  const stored=readFileSync(join(data,'viewer.json'),'utf8');assert.ok(!stored.includes('viewer-password-123'));assert.ok(!JSON.stringify(await (await api('/api/viewer',admin.cookie)).json()).includes('hash'));
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'another-password-123',permissions:{'*':['overview','topology']}},{origin:'http://wrong.test'});assert.equal(r.status,403);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'test-password-12345',permissions:{'*':['overview','topology']}});assert.equal(r.status,400);
+  const stored=readFileSync(join(data,'viewers.json'),'utf8');assert.ok(!stored.includes('viewer-password-123'));assert.ok(!JSON.stringify(await (await api('/api/viewer',admin.cookie)).json()).includes('hash'));
   await stop();await start();assert.equal((await api('/api/dashboard',viewer.cookie)).status,200);assert.equal((await api('/api/session',admin.cookie)).status,200);
-  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-456'});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',viewer.cookie)).status,401);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-456',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',viewer.cookie)).status,401);
   assert.equal((await login('view','viewer-password-123')).status,401);
   const newViewer=await login('view','viewer-password-456');assert.equal(newViewer.status,303);
-  r=await api('/api/viewer',admin.cookie,{enabled:false,username:'view',password:''});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',newViewer.cookie)).status,401);assert.equal((await login('view','viewer-password-456')).status,401);
+  r=await api('/api/viewer',admin.cookie,{enabled:false,username:'view',password:'',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);assert.equal((await api('/api/dashboard',newViewer.cookie)).status,401);assert.equal((await login('view','viewer-password-456')).status,401);
   assert.equal((await api('/api/dashboard',admin.cookie)).status,200);
+  r=await api('/api/viewer',admin.cookie,{enabled:true,username:'tenant',password:'tenant-password-123',permissions:{main:['topology']}});assert.equal(r.status,200);
+  const tenant=await login('tenant','tenant-password-123');assert.equal(tenant.status,303);
+  r=await api('/api/projects',tenant.cookie);assert.deepEqual((await r.json()).projects.map(p=>p.id),['main']);
+  assert.equal((await api('/api/dashboard?project=main&module=overview',tenant.cookie)).status,403);
+  assert.equal((await api('/api/dashboard?project=main&module=topology',tenant.cookie)).status,200);
+  assert.equal((await api('/api/dashboard?project='+projects.projects.find(p=>p.id!=='main').id+'&module=topology',tenant.cookie)).status,403);
+  r=await api('/api/support',admin.cookie,{enabled:true,title:'Hỗ trợ kỹ thuật',message:'Gọi khi có sự cố',name:'Việt Phương',phone:'0963839369',facebook:'https://www.facebook.com/leviethoaiphuong/',position:'top',audience:'all'});assert.equal(r.status,200);
+  assert.equal((await (await api('/api/support',tenant.cookie)).json()).phone,'0963839369');
+  assert.equal((await api('/api/support',tenant.cookie,{enabled:false})).status,403);
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });
