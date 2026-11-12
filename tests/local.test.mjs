@@ -67,7 +67,7 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}
   for(const path of ['/api/projects','/api/topology','/api/config','/api/pair','/api/viewer','/api/future-write-route']){r=await api(path,viewer.cookie,{enabled:false}, {'oai-authenticated-user-id':'owner','x-role':'owner'});assert.equal(r.status,403,path);}
   for(const path of ['/api/upgrade','/api/viewer'])assert.equal((await api(path,viewer.cookie)).status,403,path);
-  const forged=viewer.cookie.replace(/viewer:[a-f0-9]+/,'owner');assert.equal((await api('/api/dashboard',forged)).status,401);
+  const forged=viewer.cookie.replace('viewer:view:','owner:');assert.equal((await api('/api/dashboard',forged)).status,401);
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
   r=await api('/api/dashboard',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
