@@ -1,4 +1,5 @@
 import {createServer} from 'node:http';
+import {getSupport,saveSupport} from './support';
 import {readFile,stat} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {db,sqlite} from './database';
@@ -68,6 +69,15 @@ const server=createServer(async(req,res)=>{
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
    if(path==='/api/session'&&method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/support'){
+    res.setHeader('Content-Type','application/json');
+    if(method==='GET'){const value=getSupport();res.end(JSON.stringify(value));return;}
+    if(auth!=='owner'){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ Admin được thay đổi banner.'}));return;}
+    if(method!=='POST'){res.writeHead(405);res.end();return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    try{res.end(JSON.stringify(saveSupport(JSON.parse((body||Buffer.alloc(0)).toString()))));}
+    catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Cấu hình không hợp lệ'}));}return;
+   }
    if(path==='/api/viewer'){
     if(auth!=='owner'){res.writeHead(403);res.end();return;}
     res.setHeader('Content-Type','application/json');
@@ -101,6 +111,7 @@ const server=createServer(async(req,res)=>{
     if(module!=='clients'&&module!=='overview')data.clients=[];
     if(module!=='topology'&&module!=='overview')data.discovered=[];
     if(module==='events')data.sections={};
+    if(module==='topology'){data.sections={};data.clients=[];data.history=[];data.events=[];data.discovered=[];data.metrics=null;data.rates={};data.probes={};data.config={};}
     payload=Buffer.from(JSON.stringify(data));
    }
    res.writeHead(result.status,Object.fromEntries(result.headers.entries()));res.end(payload);return;
