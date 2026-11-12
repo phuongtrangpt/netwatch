@@ -17,6 +17,9 @@ const root=resolve('dist/public'),port=Number(process.env.PORT||8080);
 for(const name of ['NETWATCH_INGEST_URL','NETWATCH_PUBLIC_URL'])if(process.env[name]){const u=new URL(process.env[name]!);if(!['http:','https:'].includes(u.protocol)||u.pathname!=='/'||u.search||u.hash||u.username||u.password)throw Error(name+' phải là URL gốc http(s)://HOST:PORT, không có đường dẫn hay thông tin đăng nhập.');process.env[name]=u.origin;}
 const browserOrigin=(req:any,url:URL)=>{
  const origin=req.headers.origin;if(typeof origin!=='string')return false;
+ // Fetch Metadata is set by modern browsers and survives HTTPS reverse proxies.
+ // A same-origin browser request is safe even when a proxy rewrites Host internally.
+ if(req.headers['sec-fetch-site']==='same-origin')return /^https?:\/\//.test(origin);
  const allowed=new Set<string>();
  if(process.env.NETWATCH_PUBLIC_URL)allowed.add(new URL(process.env.NETWATCH_PUBLIC_URL).origin);
  for(const item of (process.env.NETWATCH_ALLOWED_ORIGINS||'').split(',')){if(item.trim())try{allowed.add(new URL(item.trim()).origin);}catch{}}
@@ -96,7 +99,7 @@ const server=createServer(async(req,res)=>{
    const handler=routes[path.slice(5)]?.[method];if(!handler){res.writeHead(404);res.end();return;}
    const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
    const request=new Request(url,{method,headers,...(body?{body}: {})});
-   const result:Response=await requestContext.run({authenticated:!!auth,role:auth||undefined},()=>handler(request));
+   const result:Response=await requestContext.run({authenticated:!!auth,role:viewer?'viewer':'owner'},()=>handler(request));
    let payload=Buffer.from(await result.arrayBuffer());
    if(viewer&&method==='GET'&&result.ok&&path==='/api/projects'){
     const data=JSON.parse(payload.toString());data.projects=data.projects.filter((p:any)=>projectAccess(auth,p.id));payload=Buffer.from(JSON.stringify(data));
