@@ -1,3 +1,10 @@
+# 1.0.4
+
+- Chuyển Docker base sang Node.js 22 LTS Alpine để hỗ trợ an toàn ba kiến trúc, gồm ARMv7.
+- Image Docker hỗ trợ x86-64, ARM64 và ARMv7; dùng được trên Windows/macOS Docker Desktop và Linux Docker Engine.
+- Thêm gói Windows 10/11 x64 portable có sẵn Node.js, mật khẩu Admin nhập kín và dữ liệu giữ trong thư mục riêng.
+- GitHub Actions kiểm tra gói Windows, build đa kiến trúc và đính kèm ZIP vào GitHub Release.
+
 # 1.0.3
 
 - Sửa đăng nhập điện thoại và proxy: xác thực Origin hỗ trợ yêu cầu same-origin hợp lệ mà không tắt CSRF.

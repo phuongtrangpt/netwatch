@@ -28,20 +28,27 @@ kiểm tra workflow và trạng thái Public của package trước; chưa cần
 - Dữ liệu riêng trong `/data` được giữ lại. Không gỡ/cài lại add-on để cập nhật.
 
 Nếu sửa mã mà chưa tăng phiên bản, workflow chỉ kiểm tra, không đẩy đè image phiên bản cũ.
-Có thể chạy thủ công qua Actions → Kiểm tra và phát hành NetWatch → Run workflow trên main
-để thử lại bản phát hành thất bại. Tag `v1.0.0` cũng được hỗ trợ, phải khớp phiên bản mã.
+Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa kiến trúc và tạo GitHub Release có gói Windows. Có thể chạy lại qua Actions → Kiểm tra và phát hành NetWatch → Run workflow trên main.
 
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
+## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.4)
+
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.4.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.4` hoặc `compose.yaml`.
+- Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon, Pi và máy ARM64, `linux/arm/v7` cho Pi/hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
+- **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; Pi aarch64 tự nhận image ARM64.
+
+Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. Gói này không dành cho Windows ARM. Với máy Mac hoặc Linux, dùng Docker để tự chọn kiến trúc và giữ dữ liệu trong named volume.
+
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.3`, gồm `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.4`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
-Dockerfile mặc định `node:20-alpine` theo yêu cầu ban đầu. Node 20 đã EOL; có thể đổi
-NODE_IMAGE sang LTS còn hỗ trợ sau khi kiểm tra manifest và tương thích hai kiến trúc.
+Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
-CI chạy kiểm tra mã và khởi động thử hai image bằng QEMU; thử trên Pi thật vẫn cần thiết.
+CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM64/ARMv7 bằng QEMU; thử trên Pi thật vẫn cần thiết.
 Đây là bản ứng dụng độc lập, không tự đồng bộ dữ liệu với web NetWatch trên cloud.
 
 [Docker, backup và chuyển dữ liệu](docs/DOCKER.md)
