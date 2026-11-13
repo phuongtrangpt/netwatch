@@ -1,5 +1,6 @@
 import {decryptSecret} from './auth';
-import {scopedKey} from '../lib/projects';
+import {scopedKey,findProject,projectDisplayName} from '../lib/projects';
+import {projectTelegramMessage} from '../lib/telegram-message';
 
 type Store={prepare:(sql:string)=>any};
 export type TelegramConfig={enabled:boolean;chatId:string;tokenCipher?:string};
@@ -61,7 +62,8 @@ export async function retryTelegramAlerts(db:Store){
     await db.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),now,'warning',`Telegram không gửi được tới Chat ID ${item.chatId} sau 24 giờ; đã dừng thử lại.`,item.project).run();continue;
    }
    if(item.nextAttemptAt>now||tried>=2)continue;tried++;
-   if(await sendTelegramConfig({enabled:true,chatId:item.chatId,tokenCipher:item.tokenCipher},item.message))await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();
+   const projectInfo=await findProject(db as any,item.project);const retryMessage=projectTelegramMessage(projectInfo?projectDisplayName(projectInfo):item.project,item.message);
+   if(await sendTelegramConfig({enabled:true,chatId:item.chatId,tokenCipher:item.tokenCipher},retryMessage))await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();
    else{item.attempts++;item.nextAttemptAt=now+Math.min(300000,30000*2**Math.min(item.attempts,4));await db.prepare('UPDATE settings SET value=? WHERE key=?').bind(JSON.stringify(item),row.key).run();}
   }
  }finally{flushing=false;}
@@ -69,6 +71,8 @@ export async function retryTelegramAlerts(db:Store){
 
 export async function sendTelegram(db:Store,project:string,message:string):Promise<boolean>{
  try{
+  const info=await findProject(db as any,project);
+  message=projectTelegramMessage(info?projectDisplayName(info):project,message);
   const global=await getGlobalTelegramConfig(db),target=await getTelegramConfig(db,project);
   if(global.tokenCipher){
    const destinations=[global.ownerChatId,...(target.enabled?[target.chatId]:[])].filter((x,i,a)=>!!x&&a.indexOf(x)===i);

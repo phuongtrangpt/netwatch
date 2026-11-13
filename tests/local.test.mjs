@@ -121,6 +121,7 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   assert.equal((await api('/api/telegram',{scope:'project',action:'save',enabled:true,chatId:'-10099'})).status,200);
   const paired=await api('/api/pair',{version:'7.20.4'});const token=(await paired.text()).match(/Authorization: Bearer ([a-f0-9]{64})/)[1];
   async function ingest(body){db.prepare('UPDATE router SET last_seen=? WHERE id=?').run(Date.now()-30000,'main');if(body.kind==='wan-probes'){const row=db.prepare("SELECT value FROM settings WHERE key='wan_probe_latest'").get();if(row){const value=JSON.parse(row.value);value.at=Date.now()-30000;value.results.forEach(x=>x.at=value.at);db.prepare("UPDATE settings SET value=? WHERE key='wan_probe_latest'").run(JSON.stringify(value));}}const r=await fetch(origin+'/api/ingest',{method:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({schema:1,...body})});assert.equal(r.status,200,await r.text());}
+  assert.equal((await api('/api/projects',{id:'main',name:'Trường Tam Thanh',model:'MikroTik',mode:'infrastructure'})).status,200);
   const metrics=(up,lan=true)=>({kind:'metrics',resource:{uptime:'1h','cpu-load':5},stats:[{name:'ether1',running:up},{name:'ether2',running:true},{name:'ether3',running:lan}]});
   await ingest(metrics(true));assert.equal(messages().length,0,'Initial sample is not a link change');
   await ingest(metrics(false));assert.equal(messages().length,2);assert.ok(messages().every(m=>m.text.includes('WAN FPT')&&m.text.includes('Link mất kết nối')));
@@ -154,6 +155,7 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   await ingest(metrics(false,false));assert.equal(messages().length,13);
   await ingest(metrics(true,false));assert.equal(messages().length,15);
   assert.deepEqual(JSON.parse(db.prepare("SELECT value FROM settings WHERE key='wan_reminder_state'").get().value),{});
+  assert.ok(messages().every(m=>m.text.includes('NetWatch · Dự án: Trường Tam Thanh')),'Every WAN loss/recovery/reminder and retried group delivery includes the project name');
 
  }finally{if(child&&child.exitCode===null)await stop();db?.close();rmSync(data,{recursive:true,force:true});}
 });

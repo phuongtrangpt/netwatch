@@ -1,3 +1,8 @@
+# 1.0.14
+
+- Thống nhất tiêu đề Telegram có tên dự án cho cảnh báo WAN/thiết bị/router, tin phục hồi và nhắc lại.
+- Lấy tên từ dự án đã lưu thay vì bảng router không có trường tên; áp dụng cho cả kênh tổng, nhóm và tin gửi lại từ hàng đợi.
+
 # 1.0.13
 
 - Bỏ nhánh cổng vật lý dùng làm đường truyền PPPoE khỏi phần nhánh LAN, hỗ trợ cả PPPoE qua VLAN và khi danh sách WAN chưa đồng bộ.
