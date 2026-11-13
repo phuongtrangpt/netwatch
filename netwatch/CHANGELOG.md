@@ -1,3 +1,7 @@
+# 1.0.7
+
+- Thêm tên hiển thị quản trị viên có thể chỉnh sửa riêng cho từng bản cài; không đổi tài khoản đăng nhập hoặc mật khẩu.
+
 # 1.0.6
 
 - Thêm bật/tắt cảnh báo Telegram cho từng IP được thêm vào sơ đồ; chọn gửi một lần, nhắc mỗi 30 phút hoặc mỗi giờ khi chưa phục hồi.

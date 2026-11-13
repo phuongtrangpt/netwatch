@@ -33,10 +33,10 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.6)
+## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.7)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.6.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.6` hoặc `compose.yaml`.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.7.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.7` hoặc `compose.yaml`.
 - Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon, Pi và máy ARM64, `linux/arm/v7` cho Pi/hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
 - **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; Pi aarch64 tự nhận image ARM64.
 
@@ -44,7 +44,7 @@ Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.6`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.7`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
@@ -63,7 +63,7 @@ CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM6
 - Nâng cấp giữ dữ liệu cũ trong `/data`. Tài khoản Viewer cũ vẫn hoạt động và ban đầu giữ quyền xem mọi dự án, mọi mục cho tương thích; hãy vào Admin chỉnh lại phạm vi trước khi chia sẻ.
 - Trước khi cập nhật Add-on, tạo bản backup dữ liệu. Không chia sẻ `/data` hoặc token thu thập router.
 
-## Cảnh báo Telegram (1.0.6)
+## Cảnh báo Telegram (1.0.7)
 
 - Trong **Cấu hình giám sát**, bật **Tự chọn interface WAN**, chọn đúng interface cho từng line và lưu. Dự án chỉ bật kiểm tra Internet riêng khi có ít nhất hai interface được chọn; PPPoE chọn interface PPPoE client.
 - Collector ping `8.8.8.8` qua từng interface đã chọn, hai gói mỗi chu kỳ. NetWatch chỉ xác nhận line offline sau hai chu kỳ liên tiếp thất bại. Trạng thái Link và Internet được hiển thị riêng.
