@@ -1,3 +1,9 @@
+# 1.0.12
+
+- Thêm tùy chọn nhắc WAN một lần, mỗi 30 phút hoặc mỗi giờ tại Cấu hình giám sát; cấu hình riêng theo dự án.
+- Nhắc cho WAN còn mất Link/Internet khi dữ liệu mới xác nhận sự cố; tự dừng khi phục hồi hoặc bỏ WAN khỏi danh sách. Không gửi nhắc dựa trên dữ liệu đã cũ.
+- Lưu mốc nhắc để không mất chu kỳ sau khi khởi động lại. Mặc định giữ chế độ một lần cho các cài đặt cũ.
+
 # 1.0.11
 
 - Sơ đồ mặc định khóa: chỉ bật kéo thả, thêm/xóa/sửa thiết bị, ghim, ping, tự sắp xếp và chỉnh dây sau khi bấm Chỉnh sơ đồ. Xong chỉnh sơ đồ khóa lại; đổi dự án cũng khóa lại.

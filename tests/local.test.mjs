@@ -142,5 +142,18 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   await api('/api/config',{wans:[],aliases:{},manual:false});
   await ingest({kind:'section',section:'wanmembers',generation:'wan-test',part:0,final:true,rows:[{list:'WAN',interface:'ether1'}]});
   await ingest(metrics(false,false));assert.equal(messages().length,11);
+  assert.equal((await api('/api/config',{wans:['ether1'],aliases:{ether1:'FPT'},manual:true,notifyRepeatMinutes:30})).status,200);
+  await ingest(metrics(false,false));assert.equal(messages().length,11,'Enabling reminders starts the interval');
+  const reminderRow=db.prepare("SELECT value FROM settings WHERE key='wan_reminder_state'").get();const reminders=JSON.parse(reminderRow.value);reminders.ether1.lastAlertAt=Date.now()-31*60000;db.prepare("UPDATE settings SET value=? WHERE key='wan_reminder_state'").run(JSON.stringify(reminders));
+  await ingest(metrics(false,false));assert.equal(messages().length,13);assert.ok(messages().slice(-2).every(m=>m.text.includes('Nhắc lại mỗi 30 phút')&&m.text.includes('FPT')));
+  await ingest(metrics(false,false));assert.equal(messages().length,13,'No duplicate reminder before next interval');
+  assert.equal((await api('/api/config',{wans:['ether1'],aliases:{},manual:true})).status,200);
+  assert.equal(JSON.parse(db.prepare("SELECT value FROM settings WHERE key='wan'").get().value).notifyRepeatMinutes,30,'Older clients preserve the setting');
+  assert.equal((await api('/api/config',{wans:['ether1'],aliases:{},manual:true,notifyRepeatMinutes:1})).status,400);
+  assert.equal((await api('/api/config',{wans:['ether1'],aliases:{},manual:true,notifyRepeatMinutes:0})).status,200);
+  await ingest(metrics(false,false));assert.equal(messages().length,13);
+  await ingest(metrics(true,false));assert.equal(messages().length,15);
+  assert.deepEqual(JSON.parse(db.prepare("SELECT value FROM settings WHERE key='wan_reminder_state'").get().value),{});
+
  }finally{if(child&&child.exitCode===null)await stop();db?.close();rmSync(data,{recursive:true,force:true});}
 });

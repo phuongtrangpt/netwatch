@@ -81,3 +81,9 @@ Ping Internet riêng từng WAN vẫn cần chọn thủ công ít nhất hai in
 Khi gửi cảnh báo lỗi, từng Chat ID có hàng đợi riêng trong dữ liệu ứng dụng. NetWatch ghi nhật ký gửi lỗi và thử lại từ 30 giây, giãn dần tối đa 5 phút, trong tối đa 24 giờ; hàng đợi còn sau khởi động lại. Tin thử gửi bằng nút Gửi thử không đưa vào hàng đợi.
 
 Nếu cả router và máy chủ NetWatch mất toàn bộ Internet, Telegram không thể đến ngay: máy chủ cần kết nối trở lại để gửi, và các sự kiện chưa từng được router gửi tới máy chủ không thể suy ra chính xác. Hai loại cảnh báo Link và Internet có thể xuất hiện riêng vì phản ánh hai phép kiểm tra khác nhau.
+
+## Nhắc lại sự cố WAN (1.0.12)
+
+Chọn dự án → **Cấu hình giám sát → Nhắc lại Telegram khi WAN chưa phục hồi**. Chọn **Chỉ báo một lần**, **Mỗi 30 phút** hoặc **Mỗi 1 giờ**, rồi bấm **Lưu cấu hình**. Lựa chọn áp dụng cho các WAN trong dự án đó, gửi tới kênh tổng và nhóm dự án đã bật. Có thể dùng với một WAN khi theo dõi Link; kiểm tra Internet bằng ping riêng vẫn cần ít nhất hai WAN được chọn thủ công và collector v5.
+
+Mốc nhắc lưu trong dữ liệu ứng dụng. Lần đầu ghi nhận WAN còn offline hoặc khi đổi chu kỳ sẽ bắt đầu đếm một khoảng đầy đủ. Các chu kỳ nhắc được kiểm tra khi nhận bản tin metrics/ping WAN mới, nên có thể chậm thêm một chu kỳ thu thập. Phục hồi hoặc bỏ chọn WAN sẽ dừng nhắc. Nếu dữ liệu cũ/router không gửi, không suy đoán WAN còn offline để nhắc.
