@@ -16,11 +16,11 @@ export async function sendScheduledTelegramSummary(now=Date.now()){
   const title=`${project.name||project.id} — ${routerOnline?'🟢 Đang gửi dữ liệu':seen?'🔴 Mất liên lạc':'⚪ Chưa có dữ liệu'}`;lines.push('',title);
   const probe=await setting(project.id,'probe_latest',{results:[]}),offline=(probe.results||[]).filter((x:any)=>now-x.at<=120000&&x.received===0&&!x.error&&x.consecutiveFailures>=2);
   const wan=await setting(project.id,'wan_probe_latest',{results:[]}),wanDown=(wan.results||[]).filter((x:any)=>now-x.at<=150000&&x.status==='offline');
-  for(const x of wanDown){lines.push(`  🔴 Internet ${x.label||x.interface}: Offline`);alertCount++;}
-  for(const x of offline){const d=(project as any).id?await setting(project.id,'topology',{devices:[]}):{devices:[]},device=(d.devices||[]).find((v:any)=>v.id===x.id);lines.push(`  🔴 ${device?.name||x.ip} (${x.ip}): ping không phản hồi`);alertCount++;}
-  const recent:any=await db.prepare("SELECT at,message FROM events WHERE project_id=? AND level='warning' AND at>=? ORDER BY at DESC LIMIT 12").bind(project.id,windowStart).all();
-  if(recent.results?.length){lines.push('  Sự cố ghi nhận trong 24 giờ:');for(const e of recent.results){lines.push(`  • ${new Date(e.at).toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})} ${e.message}`);alertCount++;}}
-  if(!wanDown.length&&!offline.length&&!recent.results?.length)lines.push('  Không ghi nhận sự cố trong 24 giờ.');
+  const currentKeys:string[]=[];for(const x of wanDown){lines.push(`  🔴 Internet ${x.label||x.interface}: Offline`);currentKeys.push(String(x.interface));alertCount++;}
+  const topology=await setting(project.id,'topology',{devices:[]});for(const x of offline){const device=(topology.devices||[]).find((v:any)=>v.id===x.id);lines.push(`  🔴 ${device?.name||x.ip} (${x.ip}): ping không phản hồi`);currentKeys.push(String(x.ip));alertCount++;}
+  const recent:any=await db.prepare("SELECT at,message FROM events WHERE project_id=? AND level='warning' AND at>=? ORDER BY at DESC LIMIT 20").bind(project.id,windowStart).all();const incidents=(recent.results||[]).filter((e:any)=>!currentKeys.some(key=>key&&String(e.message).includes(key))).slice(0,12);
+  if(incidents.length){lines.push('  Sự cố ghi nhận trong 24 giờ:');for(const e of incidents){lines.push(`  • ${new Date(e.at).toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})} ${e.message}`);alertCount++;}}
+  if(!wanDown.length&&!offline.length&&!incidents.length)lines.push('  Không ghi nhận sự cố trong 24 giờ.');
  }
  lines.splice(2,0,`Dự án: ${projects.length} · mục sự cố: ${alertCount}`);
  let message=lines.join('\n');if(message.length>3900)message=message.slice(0,3820)+'\n… Bản tin đã rút gọn do giới hạn Telegram.';
