@@ -1,3 +1,11 @@
+# 1.0.6
+
+- Thêm bật/tắt cảnh báo Telegram cho từng IP được thêm vào sơ đồ; chọn gửi một lần, nhắc mỗi 30 phút hoặc mỗi giờ khi chưa phục hồi.
+- Xác nhận thiết bị offline sau hai chu kỳ ping thất bại liên tiếp; gửi tin phục hồi khi ping thông trở lại.
+- Dùng một bot chung: Admin nhận cảnh báo tổng mọi dự án; mỗi dự án có thể gửi bản tin riêng vào nhóm Telegram của chính dự án đó.
+- Gửi bản tin tổng hợp hằng ngày cho Admin, gồm trạng thái dự án và sự cố trong 24 giờ; mặc định 08:00 giờ Việt Nam, có thể đổi giờ hoặc tắt.
+- Giữ cấu hình Telegram 1.0.5 hoạt động cho tới khi Admin lưu cấu hình bot dùng chung mới.
+
 # 1.0.5
 
 - Chọn interface cho từng line WAN; từ hai line trở lên, kiểm tra Internet riêng bằng ping 8.8.8.8 qua interface đã chọn.
