@@ -52,3 +52,5 @@
 .wan-internet.green{color:#18835c}.wan-internet.red{color:#c14343}.wan-internet.amber{color:#9a7848}
 .button-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.button-row .button{margin:0}
 .telegram-settings .version-input{max-width:520px}
+
+.device-mode-guide{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#f8faf6}.device-mode-guide summary{cursor:pointer;color:var(--green)}.device-mode-guide p,.device-mode-guide ol{margin-top:12px}.device-mode-guide ol{padding-left:22px}.device-mode-guide li{margin-bottom:9px}.device-mode-guide .code-block{min-width:0;max-width:100%}.device-mode-guide .code-block code{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}.device-mode-guide .code-block button{flex-shrink:0}.device-mode-guide>a{display:inline-block;margin-top:12px;text-decoration:underline;color:var(--green)}

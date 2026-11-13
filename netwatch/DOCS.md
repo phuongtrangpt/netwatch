@@ -4,14 +4,36 @@
 2. Cài **NetWatch Local** (chỉ sau khi workflow GitHub đã xanh và package GHCR là Public).
 3. Vào Configuration:
    - `password`: mật khẩu riêng, tối thiểu 12 ký tự.
-   - `ingest_url`: `http://IP_LAN_CUA_PI:8080`, hoặc địa chỉ VPN mà router truy cập được.
+   - `ingest_url`: `http://IP_LAN_MAY_CHU:8080`, hoặc địa chỉ VPN mà router truy cập được.
 4. Nếu cổng 8080 bị chiếm, đổi cổng trong Network và sửa ingest_url theo cổng mới.
 5. Bật Start on boot và Watchdog; Start rồi Open Web UI.
-6. Đăng nhập, tạo/chọn dự án và tải bộ cài router từ chính web Pi.
+6. Đăng nhập, tạo/chọn dự án và tải bộ cài router từ chính web máy chủ.
 
-RouterOS tối thiểu 7.17 trong nhánh 7.x. Router chủ động gửi dữ liệu về Pi, không cần
-mở RouterOS API 8728. Router ở xa phải có đường tới Pi qua VPN. Không mở web/API này
+RouterOS tối thiểu 7.17 trong nhánh 7.x. Router chủ động gửi dữ liệu về máy chủ, không cần
+mở RouterOS API 8728. Router ở xa phải có đường tới máy chủ qua VPN. Không mở web/API này
 trực tiếp ra Internet. HTTP ở ví dụ dành cho LAN/VPN tin cậy.
+
+## KTV: bật fetch và scheduler trước khi cài collector
+
+Trong WinBox → New Terminal, chạy:
+
+```routeros
+/system device-mode print
+```
+
+NetWatch cần `fetch: yes` để gửi dữ liệu và `scheduler: yes` để chạy định kỳ. Chế độ `home` có thể mặc định tắt cả hai; các chế độ khác có thể đã bật. Nếu cả hai đã là `yes`, bỏ qua thao tác bật quyền.
+
+Nếu có giá trị `no`, KTV có mặt tại router chạy:
+
+```routeros
+/system device-mode update fetch=yes scheduler=yes
+```
+
+Chờ thông báo xác nhận, rồi trong thời gian đếm ngược (mặc định 5 phút), nhấn nhanh rồi thả nút RESET hoặc MODE trên router đang chạy. Không giữ lâu và không giữ RESET khi cấp nguồn. Một số thiết bị cũ chỉ xác nhận được bằng ngắt toàn bộ nguồn rồi cấp lại; nếu có cả adapter và PoE, ngắt cả hai.
+
+**Router khởi động lại, mạng gián đoạn tạm thời.** Lệnh reboot thông thường không thay thế xác nhận vật lý. Sau khi kết nối lại, chạy lại lệnh kiểm tra để xác nhận cả hai quyền là `yes` rồi mới cài/chạy lại collector. Lệnh trên giữ nguyên chế độ device-mode hiện tại, chỉ bật hai quyền cần thiết.
+
+Nếu hết thời gian hoặc quá số lần thử, làm theo thông báo Terminal; không gửi lặp lệnh khi đang chờ xác nhận. Nếu không có menu device-mode, kiểm tra tài liệu đúng phiên bản/model. Tham khảo [tài liệu MikroTik](https://manual.mikrotik.com/docs/system-information-and-utilities/device-mode/).
 
 ## Dữ liệu và cập nhật
 
@@ -23,7 +45,7 @@ Mật khẩu khởi tạo được lưu dưới dạng hash. Đổi password tro
 chạy đầu chưa tự thay mật khẩu đang lưu. Xem tài liệu bảo trì trong docs/DOCKER.md;
 không xóa database để đặt lại mật khẩu.
 
-Giao diện mở trực tiếp cổng 8080, chưa dùng Ingress. Dữ liệu web cũ chưa tự chuyển sang Pi.
+Giao diện mở trực tiếp cổng 8080, chưa dùng Ingress. Dữ liệu web cũ chưa tự chuyển sang máy chủ.
 Công cụ xuất/nhập cấu hình có trong scripts; cần thao tác riêng khi chuyển từ bản cloud.
 
 ## Chia sẻ quyền xem

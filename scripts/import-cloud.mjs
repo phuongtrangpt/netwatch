@@ -10,9 +10,9 @@ const valid=id=>id==='main'||/^net-[a-f0-9]{32}$/.test(id);
 const key=(id,k)=>id==='main'?k:id+':'+k;
 db.transaction(()=>{
  if(db.prepare('SELECT COUNT(*) AS n FROM router').get().n||db.prepare('SELECT COUNT(*) AS n FROM settings').get().n)throw Error('Chỉ nhập vào dữ liệu cục bộ mới, trước khi ghép router. Không ghi đè dữ liệu đang dùng.');
- for(const p of input.projects){if(!valid(p.id)||typeof p.name!=='string'||p.name.length>70||!['infrastructure','pppoe'].includes(p.mode)||!['RB5009','E50UG','Khác'].includes(p.model))throw Error('Sai dự án');db.prepare('INSERT INTO projects(id,name,model,mode,created_at) VALUES(?,?,?,?,?)').run(p.id,p.name,p.model,p.mode,Number(p.createdAt)||Date.now());}
+ for(const p of input.projects){if(!valid(p.id)||typeof p.name!=='string'||p.name.length>70||!['infrastructure','pppoe'].includes(p.mode)||!['MikroTik','RB5009','E50UG','RB3011','RB4011','hEX','hAP','CCR','CRS','CHR','Khác'].includes(p.model))throw Error('Sai dự án');db.prepare('INSERT INTO projects(id,name,model,mode,created_at) VALUES(?,?,?,?,?)').run(p.id,p.name,p.model,p.mode,Number(p.createdAt)||Date.now());}
  for(const s of input.snapshots){const id=s.project?.id;if(!valid(id)||!input.projects.some(p=>p.id===id))throw Error('Snapshot không thuộc dự án');
   for(const k of ['config','topology'])if(s[k])db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run(key(id,k==='config'?'wan':k),JSON.stringify(s[k]));
   for(const row of (s.history||[]).slice(-1440)){const {at,...metrics}=row;if(!Number.isSafeInteger(at))throw Error('Sai thời gian lịch sử');if(id==='main')db.prepare('INSERT OR REPLACE INTO history(minute,data) VALUES(?,?)').run(at,JSON.stringify(metrics));else db.prepare('INSERT OR REPLACE INTO project_history(project_id,minute,data) VALUES(?,?,?)').run(id,at,JSON.stringify(metrics));}
  }
-})();db.close();console.log('Đã nhập dự án, sơ đồ, alias và lịch sử khả dụng (tối đa 24 giờ). Hãy tạo bộ cài router mới trên web Pi.');
+})();db.close();console.log('Đã nhập dự án, sơ đồ, alias và lịch sử khả dụng (tối đa 24 giờ). Hãy tạo bộ cài router mới trên web NetWatch.');

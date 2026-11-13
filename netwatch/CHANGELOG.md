@@ -1,3 +1,9 @@
+# 1.0.10
+
+- Thống nhất giao diện và hướng dẫn cho MikroTik và máy chủ NetWatch; model chỉ xuất hiện trong phần chọn thiết bị khi thêm/sửa dự án.
+- Thêm hướng dẫn kiểm tra fetch/scheduler, bật trong device-mode và xác nhận vật lý trước khi cài collector.
+- Mở rộng lựa chọn model và tách lựa chọn model khỏi mục đích giám sát.
+
 # 1.0.9
 
 - Sửa trang trắng sau đăng nhập trên Windows: phục vụ JavaScript/CSS đúng với dấu phân cách đường dẫn của hệ điều hành.
@@ -55,7 +61,7 @@
 
 # 1.0.0
 
-- Đóng gói NetWatch cho HAOS và Raspberry Pi.
+- Đóng gói NetWatch cho HAOS và máy chủ.
 - Lưu dữ liệu SQLite cục bộ trong /data.
 - Giữ sơ đồ thủ công, neo, điểm uốn, switch ảo và nhiều dự án.
 - GitHub Actions build image ARM64/ARMv7 và kiểm tra khởi động qua QEMU.

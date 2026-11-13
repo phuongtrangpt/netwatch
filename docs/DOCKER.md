@@ -1,8 +1,8 @@
-# NetWatch Local — Docker cho Raspberry Pi và Home Assistant OS
+# NetWatch Local — Docker cho máy chủ và Home Assistant OS
 
-Bản chuyển NetWatch hiện có sang tiến trình Node.js và SQLite cục bộ. Giữ giao diện React/React Flow, dự án RB5009/E50UG, sơ đồ tự bố trí hoặc kéo tay, neo/điểm uốn, switch ảo, thiết bị ghim, alias, dây tím/đỏ và toàn màn hình. Không tự thêm mọi thiết bị vào sơ đồ. Dữ liệu thiết bị vẫn do script router gửi lên; đây không phải bản đổi sang polling RouterOS API hay bản MikroDash.
+Bản chuyển NetWatch hiện có sang tiến trình Node.js và SQLite cục bộ. Giữ giao diện React/React Flow, dự án MikroTik, sơ đồ tự bố trí hoặc kéo tay, neo/điểm uốn, switch ảo, thiết bị ghim, alias, dây tím/đỏ và toàn màn hình. Không tự thêm mọi thiết bị vào sơ đồ. Dữ liệu thiết bị vẫn do script router gửi lên; đây không phải bản đổi sang polling RouterOS API hay bản MikroDash.
 
-**Chọn một cách cài:** Pi đang chạy HAOS → ưu tiên add-on Supervisor ở phần 5. `docker run` ở phần 4 chỉ dùng nếu đã có shell truy cập Docker của máy chủ, không phải Terminal add-on thông thường.
+**Chọn một cách cài:** Máy chủ đang chạy HAOS → ưu tiên add-on Supervisor ở phần 5. `docker run` ở phần 4 chỉ dùng nếu đã có shell truy cập Docker của máy chủ, không phải Terminal add-on thông thường.
 
 ## 1. Nền tảng được hỗ trợ (1.0.4)
 
@@ -25,7 +25,7 @@ server/                      HTTP, đăng nhập một chủ, SQLite tương th�
 app/ lib/                    Giao diện và logic NetWatch được giữ lại
 scripts/start.mjs            Đọc options.json của HAOS nếu có
 scripts/export-cloud.js      Xuất dữ liệu khả dụng từ web cũ
-scripts/import-cloud.mjs      Nhập cấu hình vào database mới trên Pi
+scripts/import-cloud.mjs      Nhập cấu hình vào database mới trên máy chủ
 ha-addon/netwatch/config.yaml Cấu hình Supervisor kéo image đã build
 ```
 
@@ -33,7 +33,7 @@ Nguồn cơ sở: NetWatch commit `a6eeb9c6127b132f09ad2f33fd7d8f5d46261404`. Đ
 
 Ứng dụng nghe cổng **8080**. `/data/netwatch.db` lưu dự án, cấu hình WAN, thiết bị ghim/alias, vị trí, neo/điểm uốn, số liệu và lịch sử. SQLite dùng WAL; không sao chép riêng file .db trong lúc ứng dụng đang ghi. `/data/auth.json` lưu hash mật khẩu và khóa phiên. Khi khởi động lại hoặc thay container, phải dùng lại đúng volume. Lịch sử hiện được dọn theo logic bản gốc (khoảng 7 ngày), giao diện truy vấn tối đa 24 giờ.
 
-Dockerfile mặc định `node:22-alpine`, có manifest chính thức cho amd64, ARM64 và ARMv7. Node.js 24 Alpine hiện không cung cấp ARMv7 nên không phù hợp làm base chung cho các Pi ARM32. Gói Windows portable dùng Node.js 24 LTS riêng. Không đưa `.env`, mật khẩu, database hoặc token router vào image.
+Dockerfile mặc định `node:22-alpine`, có manifest chính thức cho amd64, ARM64 và ARMv7. Node.js 24 Alpine hiện không cung cấp ARMv7 nên không phù hợp làm base chung cho các thiết bị ARM32. Gói Windows portable dùng Node.js 24 LTS riêng. Không đưa `.env`, mật khẩu, database hoặc token router vào image.
 
 ## 3. Chuẩn bị Windows 11
 
@@ -63,9 +63,9 @@ docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t YOUR_DOCK
 docker buildx imagetools inspect YOUR_DOCKERHUB_USER/netwatch:1.0.4
 ```
 
-Kết quả inspect của bản 1.0.4 có `linux/amd64`, `linux/arm64` và `linux/arm/v7`. Docker trên Pi sẽ tự kéo bản phù hợp. Build module SQLite dưới giả lập có thể mất khá lâu. Không ép stage dependencies chạy trên BUILDPLATFORM vì binary SQLite sẽ sai kiến trúc.
+Kết quả inspect của bản 1.0.4 có `linux/amd64`, `linux/arm64` và `linux/arm/v7`. Docker trên máy chủ sẽ tự kéo bản phù hợp. Build module SQLite dưới giả lập có thể mất khá lâu. Không ép stage dependencies chạy trên BUILDPLATFORM vì binary SQLite sẽ sai kiến trúc.
 
-Trước khi đổi base image, inspect manifest; ví dụ `node:24-alpine` hiện không có ARMv7 và sẽ làm mất khả năng build cho Pi ARM32:
+Trước khi đổi base image, inspect manifest; ví dụ `node:24-alpine` hiện không có ARMv7 và sẽ làm mất khả năng build cho thiết bị ARM32:
 
 ```powershell
 docker buildx imagetools inspect node:22-alpine
@@ -94,7 +94,7 @@ docker buildx build --platform linux/arm64 -t netwatch:1.0.4 --provenance=false 
 docker buildx build --platform linux/arm/v7 -t netwatch:1.0.4 --provenance=false --output type=docker,dest=netwatch-armv7.tar .
 ```
 
-Máy Windows/macOS dùng image Docker `linux/amd64` hoặc `linux/arm64` theo Docker Desktop. Pi/HAOS aarch64 dùng arm64; `armv7l` dùng arm/v7. Windows portable ZIP chỉ dành cho x64.
+Máy Windows/macOS dùng image Docker `linux/amd64` hoặc `linux/arm64` theo Docker Desktop. HAOS aarch64 dùng arm64; `armv7l` dùng arm/v7. Windows portable ZIP chỉ dành cho x64.
 
 Nếu đã bật SSH **host** HAOS qua khóa SSH theo tài liệu chính thức (cổng 22222), ví dụ chuyển bản ARM64:
 
@@ -102,7 +102,7 @@ Nếu đã bật SSH **host** HAOS qua khóa SSH theo tài liệu chính thức 
 scp -P 22222 .\netwatch-arm64.tar root@IP_CUA_PI:/mnt/data/netwatch-arm64.tar
 ```
 
-Trên host Pi:
+Trên máy chủ:
 
 ```sh
 docker load -i /mnt/data/netwatch-arm64.tar
@@ -117,7 +117,7 @@ Luồng .tar này phù hợp Docker thủ công. Với add-on dùng config `imag
 
 Nếu dùng HAOS host, đây là container tự quản ngoài Supervisor; Supervisor không quản lý cập nhật hay backup dữ liệu của container này. Bật host SSH là thao tác nâng cao theo tài liệu chính thức. Nếu không quen, chọn phần 5.
 
-Sau khi image đã load từ .tar, lệnh dưới đây dùng được. **Thay mật khẩu và IP ví dụ trước khi chạy.** Mật khẩu ít nhất 12 ký tự. IP là IP LAN/VPN cố định của Pi mà router có thể truy cập, không dùng localhost và không dùng URL Ingress.
+Sau khi image đã load từ .tar, lệnh dưới đây dùng được. **Thay mật khẩu và IP ví dụ trước khi chạy.** Mật khẩu ít nhất 12 ký tự. IP là IP LAN/VPN cố định của máy chủ mà router có thể truy cập, không dùng localhost và không dùng URL Ingress.
 
 ```sh
 docker volume create my-netmon-data
@@ -148,13 +148,13 @@ Supervisor tự quản lý /data, khởi động và backup của add-on. Không
 để tạo thêm một container trùng với add-on. /share chỉ được truy cập nếu có mapping phù hợp;
 ứng dụng này không cần /share.
 
-## 7. Chuyển từ web cũ sang Pi
+## 7. Chuyển từ web cũ sang máy chủ
 
 Không có tự động sao chép database Cloudflare/D1 từ web cũ sang volume. Hai bản lưu riêng. Các bước:
 
-1. Giữ web cũ cho đến khi kiểm tra xong bản Pi.
+1. Giữ web cũ cho đến khi kiểm tra xong bản máy chủ.
 2. Nếu cần giữ sơ đồ: mở web cũ trên Windows đã đăng nhập, mở DevTools Console, xem và chạy nội dung `scripts/export-cloud.js`. Nó chỉ đọc `/api/projects` và `/api/dashboard`, tải `netwatch-cloud-export.json`.
-3. Khởi động bản Pi một lần để tạo bảng. Chưa ghép router/chưa cấu hình dự án mới trên Pi. Với Docker thủ công:
+3. Khởi động bản máy chủ một lần để tạo bảng. Chưa ghép router/chưa cấu hình dự án mới trên máy chủ. Với Docker thủ công:
 
 ```sh
 docker cp netwatch-cloud-export.json netwatch:/data/netwatch-cloud-export.json
@@ -165,10 +165,10 @@ Lệnh import chỉ nhận database chưa có settings/router để tránh ghi �
 
 Với add-on HAOS, đường thao tác dữ liệu app riêng khác Docker thủ công; không có nút import trên giao diện bản này. Nếu không có host shell để chạy import vào container add-on, cần hỗ trợ chuyển dữ liệu riêng hoặc dựng lại sơ đồ thủ công. Không copy lệnh `docker exec netwatch` vì tên container Supervisor khác.
 
-4. Trên web Pi, chọn từng dự án → Kết nối router → tạo bộ cài `.rsc` mới, dùng URL LAN/VPN của Pi. Tải và import trên đúng router (RouterOS 7.17+). Script dùng lại tên `netwatch-collect`; xem trước nội dung, không chạy đồng thời hai lịch collector. Bộ cài cục bộ không dùng header/token của ChatGPT Sites.
-5. Theo dõi Last seen, dữ liệu cổng, DHCP/PPPoE, vị trí sơ đồ và trạng thái ping. Khi Pi nhận ổn định mới ngừng sử dụng web cũ.
+4. Trên web máy chủ, chọn từng dự án → Kết nối router → tạo bộ cài `.rsc` mới, dùng URL LAN/VPN của máy chủ. Tải và import trên đúng router (RouterOS 7.17+). Script dùng lại tên `netwatch-collect`; xem trước nội dung, không chạy đồng thời hai lịch collector. Bộ cài cục bộ không dùng header/token của ChatGPT Sites.
+5. Theo dõi Last seen, dữ liệu cổng, DHCP/PPPoE, vị trí sơ đồ và trạng thái ping. Khi máy chủ nhận ổn định mới ngừng sử dụng web cũ.
 
-Không cần mở RouterOS API 8728 cho phiên bản Docker này: giữ cơ chế push đang dùng. Các E50UG ở nơi khác phải có đường tới Pi qua VPN/site-to-site; đóng Docker không tự tạo đường VPN đó. Router vẫn cần quyền fetch/scheduler trong device-mode như bản cũ.
+Không cần mở RouterOS API 8728 cho phiên bản Docker này: giữ cơ chế push đang dùng. Các router MikroTik ở nơi khác phải có đường tới máy chủ qua VPN/site-to-site; đóng Docker không tự tạo đường VPN đó. Router vẫn cần quyền fetch/scheduler trong device-mode như bản cũ.
 
 ## 8. Backup, cập nhật và mật khẩu
 

@@ -16,5 +16,6 @@ test('viewers can inspect and fullscreen topology, while mutation buttons are hi
 });
 test('project selector stays available while viewer create/edit controls are hidden',()=>{
  const html=renderToStaticMarkup(React.createElement(Projects,{projects:[{id:'main',name:'Nhà',model:'RB5009',mode:'infrastructure'}],readOnly:true,onSelect:()=>{},onSaved:()=>{},notify:()=>{}}));
+ assert.doesNotMatch(html,/RB5009|E50UG|Raspberry Pi/);
  const bs=buttons(html);assert.match(bs.find(b=>b.text.includes('Thêm dự án'))!.attrs,/hidden/);assert.doesNotMatch(bs.find(b=>b.text.includes('Mở dự án'))!.attrs,/hidden|disabled/);
 });

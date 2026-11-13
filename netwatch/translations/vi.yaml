@@ -3,7 +3,7 @@ configuration:
     name: Mật khẩu quản trị
     description: Đặt lần khởi tạo đầu tiên, tối thiểu 12 ký tự.
   ingest_url:
-    name: Địa chỉ Pi nhận dữ liệu router
+    name: Địa chỉ máy chủ nhận dữ liệu router
     description: Ví dụ http://192.168.1.50:8080; router phải truy cập được địa chỉ này.
 network:
   8080/tcp: Giao diện NetWatch và API nhận dữ liệu MikroTik

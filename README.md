@@ -1,7 +1,7 @@
 # NetWatch · Giám sát MikroTik
 
-Chạy trên Raspberry Pi với Home Assistant OS, không cần thuê cloud.
-Sơ đồ mạng kéo thả, ghim/alias, switch ảo, chỉnh neo/đường dây, nhiều dự án RB5009/E50UG,
+Chạy trên Windows, Linux, macOS hoặc Home Assistant OS, lưu dữ liệu tại máy chủ NetWatch.
+Sơ đồ mạng kéo thả, ghim/alias, switch ảo, chỉnh neo/đường dây, nhiều dự án MikroTik,
 DHCP/PPPoE và lịch sử lưu cục bộ trong `/data`.
 
 [Thêm kho NetWatch vào Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fphuongtrangpt%2Fnetwatch)
@@ -33,22 +33,22 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.9)
+## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.10)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.9.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.9` hoặc `compose.yaml`.
-- Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon, Pi và máy ARM64, `linux/arm/v7` cho Pi/hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
-- **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; Pi aarch64 tự nhận image ARM64.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.10.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.10` hoặc `compose.yaml`.
+- Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon và máy chủ ARM64, `linux/arm/v7` cho hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
+- **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; máy chủ aarch64 tự nhận image ARM64.
 
 Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. Gói này không dành cho Windows ARM. Với máy Mac hoặc Linux, dùng Docker để tự chọn kiến trúc và giữ dữ liệu trong named volume.
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.9`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
-HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.10`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Chọn kiến trúc theo phần cứng máy chủ: x86-64, ARM64 hoặc ARMv7.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
-CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM64/ARMv7 bằng QEMU; thử trên Pi thật vẫn cần thiết.
+CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM64/ARMv7 bằng QEMU; thử trên máy chủ thật vẫn cần thiết.
 Đây là bản ứng dụng độc lập, không tự đồng bộ dữ liệu với web NetWatch trên cloud.
 
 [Docker, backup và chuyển dữ liệu](docs/DOCKER.md)
@@ -73,7 +73,7 @@ CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM6
 
 Không cần cài lại collector trên MikroTik khi giữ nguyên dữ liệu, địa chỉ và cổng. Để quay lại bản cũ, dừng bản mới rồi dùng bản sao dữ liệu trước cập nhật với bản cũ.
 
-## Cảnh báo Telegram (1.0.9)
+## Cảnh báo Telegram (1.0.10)
 
 - Trong **Cấu hình giám sát**, bật **Tự chọn interface WAN**, chọn đúng interface cho từng line và lưu. Dự án chỉ bật kiểm tra Internet riêng khi có ít nhất hai interface được chọn; PPPoE chọn interface PPPoE client.
 - Collector ping `8.8.8.8` qua từng interface đã chọn, hai gói mỗi chu kỳ. NetWatch chỉ xác nhận line offline sau hai chu kỳ liên tiếp thất bại. Trạng thái Link và Internet được hiển thị riêng.
@@ -86,3 +86,7 @@ Không cần cài lại collector trên MikroTik khi giữ nguyên dữ liệu, 
 - Bot Token được mã hóa bằng khóa riêng nằm trong `/data/auth.json`; không hiển thị lại trong giao diện và không cấp cho Viewer. Sao lưu `/data` để giữ khóa giải mã khi di chuyển máy.
 - Router đã cài collector cũ cần một lần tải **nâng cấp v5 giữ nguyên khóa** trong mục Kết nối router, upload `.rsc` vào WinBox Files rồi chạy `/import file-name=netwatch-upgrade-v5.rsc`. Router mới dùng bộ cài v5. Không sửa routing table hoặc cấu hình WAN.
 
+
+## Quyền router trước khi kết nối
+
+KTV kiểm tra `fetch` và `scheduler` trong device-mode. Nếu bị tắt, bật bằng `/system device-mode update fetch=yes scheduler=yes` và xác nhận vật lý theo hướng dẫn tại **Kết nối router** hoặc [hướng dẫn chi tiết](netwatch/DOCS.md#ktv-bật-fetch-và-scheduler-trước-khi-cài-collector). Router sẽ khởi động lại; không cần đổi toàn bộ mode.
