@@ -51,3 +51,4 @@
 .wan-internet{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#8a7660}
 .wan-internet.green{color:#18835c}.wan-internet.red{color:#c14343}.wan-internet.amber{color:#9a7848}
 .button-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.button-row .button{margin:0}
+.telegram-settings .version-input{max-width:520px}

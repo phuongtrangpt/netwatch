@@ -17,7 +17,7 @@ export async function POST(req:Request){
   if(rawToken.length>512|| (rawToken&&!/^[0-9]{5,}:[A-Za-z0-9_-]{20,}$/.test(rawToken)))return json({error:'Bot Token có định dạng không hợp lệ.'},400);
   const tokenCipher=clearToken?undefined:rawToken?encryptSecret(rawToken):old.tokenCipher;
   if(input.action==='test'){
-   if(!chatId||!tokenCipher)return json({error:'Nhập Chat ID và Bot Token rồi bấm Lưu trước.'},400);
+   if(!chatId||!tokenCipher)return json({error:'Nhập Chat ID và Bot Token trước khi gửi thử.'},400);
    const project=await findProject(db,id),ok=await sendTelegramConfig({enabled:true,chatId,tokenCipher},`✅ NetWatch: gửi thử thành công cho dự án ${project?.name||id}.`);
    if(!ok)return json({error:'Không gửi được. Kiểm tra Bot Token, Chat ID và nhắn /start cho bot trước.'},502);
    return json({ok:true});
