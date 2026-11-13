@@ -76,7 +76,7 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
-   if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,displayName,permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,...(auth==='owner'?{displayName}:{}),permissions:visiblePermissions(auth)}));return;}
    if(path==='/api/support'){
     res.setHeader('Content-Type','application/json');
     if(method==='GET'){const value=getSupport();res.end(JSON.stringify(value));return;}
