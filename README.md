@@ -33,10 +33,10 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.5)
+## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.6)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.5.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.5` hoặc `compose.yaml`.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.6.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.6` hoặc `compose.yaml`.
 - Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon, Pi và máy ARM64, `linux/arm/v7` cho Pi/hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
 - **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; Pi aarch64 tự nhận image ARM64.
 
@@ -44,7 +44,7 @@ Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.5`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.6`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
@@ -63,11 +63,16 @@ CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM6
 - Nâng cấp giữ dữ liệu cũ trong `/data`. Tài khoản Viewer cũ vẫn hoạt động và ban đầu giữ quyền xem mọi dự án, mọi mục cho tương thích; hãy vào Admin chỉnh lại phạm vi trước khi chia sẻ.
 - Trước khi cập nhật Add-on, tạo bản backup dữ liệu. Không chia sẻ `/data` hoặc token thu thập router.
 
-## Kiểm tra WAN và cảnh báo Telegram (1.0.5)
+## Cảnh báo Telegram (1.0.6)
 
 - Trong **Cấu hình giám sát**, bật **Tự chọn interface WAN**, chọn đúng interface cho từng line và lưu. Dự án chỉ bật kiểm tra Internet riêng khi có ít nhất hai interface được chọn; PPPoE chọn interface PPPoE client.
 - Collector ping `8.8.8.8` qua từng interface đã chọn, hai gói mỗi chu kỳ. NetWatch chỉ xác nhận line offline sau hai chu kỳ liên tiếp thất bại. Trạng thái Link và Internet được hiển thị riêng.
-- Trong cùng mục, cấu hình Bot Token và Chat ID Telegram theo từng dự án. Nhắn `/start` cho bot, lưu cấu hình rồi dùng **Gửi tin nhắn thử**. Cảnh báo được gửi khi WAN mất/phục hồi hoặc router ngừng gửi dữ liệu hơn 3 phút rồi kết nối lại.
+- Tại **Cảnh báo sự cố qua Telegram** của dự án Mạng chính, cấu hình Bot Token và Chat ID cá nhân dùng làm kênh tổng. Kênh này nhận sự cố của tất cả dự án. Token được mã hóa và dùng chung.
+- Trong từng dự án, có thể bật Chat ID nhóm riêng. Nhóm chỉ nhận sự cố từ dự án đó; thêm bot vào nhóm và cấp quyền gửi tin nhắn. Không dùng chung Chat ID nhóm nếu muốn tách riêng người nhận.
+- Khi thêm/chỉnh sửa IP trên sơ đồ, bật **Cho router ping định kỳ IP này** và tích **Thông báo Telegram khi thiết bị gặp sự cố**. Chọn gửi một lần (vẫn gửi khi phục hồi), lặp lại mỗi 30 phút hoặc mỗi giờ. NetWatch báo Offline sau hai chu kỳ liên tiếp không phản hồi; lỗi ping không kết luận thiết bị Offline.
+- Bản tin sáng mặc định gửi 08:00 giờ Việt Nam tới kênh tổng, gồm trạng thái từng dự án, thiết bị/line đang Offline và cảnh báo ghi nhận trong 24 giờ. Admin có thể đổi giờ hoặc tắt trong cấu hình kênh tổng.
+- Nhắn `/start` cho bot cá nhân, lưu cấu hình rồi bấm **Gửi thử**. Để thử nhóm, lưu Bot Token ở Mạng chính, thêm bot vào nhóm, nhập Chat ID nhóm và gửi thử.
+- Với cấu hình cũ từ 1.0.5, NetWatch tự dùng Chat ID/Token hiện có làm kênh Admin khi bạn lưu cấu hình mới; Chat ID nhóm cần nhập riêng trong từng dự án.
 - Bot Token được mã hóa bằng khóa riêng nằm trong `/data/auth.json`; không hiển thị lại trong giao diện và không cấp cho Viewer. Sao lưu `/data` để giữ khóa giải mã khi di chuyển máy.
 - Router đã cài collector cũ cần một lần tải **nâng cấp v5 giữ nguyên khóa** trong mục Kết nối router, upload `.rsc` vào WinBox Files rồi chạy `/import file-name=netwatch-upgrade-v5.rsc`. Router mới dùng bộ cài v5. Không sửa routing table hoặc cấu hình WAN.
 
