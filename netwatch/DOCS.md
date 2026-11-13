@@ -87,3 +87,9 @@ Nếu cả router và máy chủ NetWatch mất toàn bộ Internet, Telegram kh
 Chọn dự án → **Cấu hình giám sát → Nhắc lại Telegram khi WAN chưa phục hồi**. Chọn **Chỉ báo một lần**, **Mỗi 30 phút** hoặc **Mỗi 1 giờ**, rồi bấm **Lưu cấu hình**. Lựa chọn áp dụng cho các WAN trong dự án đó, gửi tới kênh tổng và nhóm dự án đã bật. Có thể dùng với một WAN khi theo dõi Link; kiểm tra Internet bằng ping riêng vẫn cần ít nhất hai WAN được chọn thủ công và collector v5.
 
 Mốc nhắc lưu trong dữ liệu ứng dụng. Lần đầu ghi nhận WAN còn offline hoặc khi đổi chu kỳ sẽ bắt đầu đếm một khoảng đầy đủ. Các chu kỳ nhắc được kiểm tra khi nhận bản tin metrics/ping WAN mới, nên có thể chậm thêm một chu kỳ thu thập. Phục hồi hoặc bỏ chọn WAN sẽ dừng nhắc. Nếu dữ liệu cũ/router không gửi, không suy đoán WAN còn offline để nhắc.
+
+## Phiên bản và nhánh PPPoE (1.0.13)
+
+Số phiên bản đang chạy hiển thị trên thanh đầu trang, chân trang và trang đăng nhập, lấy từ gói ứng dụng đã cài. Khi cập nhật xong, nhấn Ctrl+F5 và đối chiếu số này.
+
+Sơ đồ giữ nhánh WAN logic, loại cổng truyền dẫn PPPoE khỏi nhánh LAN (kể cả PPPoE qua VLAN). Không xóa interface, cấu hình WAN hoặc vị trí các thiết bị LAN đã ghim; việc ẩn đường chỉ tác động phần hiển thị sơ đồ.

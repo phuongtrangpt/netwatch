@@ -59,7 +59,7 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
  async function login(username,password){const r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password}),redirect:'manual'});return {status:r.status,cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  function api(path,cookie,body,extra={}){return fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie:cookie||'','Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});}
  try{
-  await start();const admin=await login('admin','test-password-12345');assert.equal(admin.status,303,output);
+  await start();assert.ok((await (await fetch(origin+'/login')).text()).includes('NetWatch v'+JSON.parse(readFileSync('package.json','utf8')).version));const admin=await login('admin','test-password-12345');assert.equal(admin.status,303,output);
   let proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
   assert.equal(proxyLogin.status,303,'Same-origin mobile form behind reverse proxy must be accepted');
   proxyLogin=await fetch(origin+'/login',{method:'POST',headers:{origin:'https://attacker.example.test','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:'test-password-12345'}),redirect:'manual'});
@@ -68,7 +68,7 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
   const viewer=await login('view','viewer-password-123');assert.equal(viewer.status,303);
-  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
+  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{version:JSON.parse(readFileSync('package.json','utf8')).version,role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
   r=await api('/api/projects',admin.cookie,{name:'Nhà trọ',model:'E50UG',mode:'pppoe'});const projects=await r.json();assert.equal(r.status,200);
   r=await api('/api/projects',viewer.cookie);assert.equal((await r.json()).projects.length,2);
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}

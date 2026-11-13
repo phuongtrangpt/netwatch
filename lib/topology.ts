@@ -31,7 +31,13 @@ export function topologyLayout(data:any,devices:WatchedDevice[],_showUnused=fals
  const iface=list(data.sections?.interfaces),stats=list(data.metrics?.stats),wans:string[]=data.wanNames||[];
  const running=(name:string)=>truth(stats.find(x=>x.name===name)?.running??iface.find(x=>x.name===name)?.running);
  const fresh=!!data.lastSeen&&Date.now()-data.lastSeen<100000;
- const wanPhysical=new Set(wans);for(const w of wans){const p=[...list(data.sections?.pppoe),...list(data.sections?.vlans)].find(i=>i.name===w);if(p?.interface)wanPhysical.add(p.interface);}
+ const wanPhysical=new Set<string>();
+ const pppoe=list(data.sections?.pppoe),layers=[...pppoe,...list(data.sections?.vlans)];
+ const visit=(name:string,seen=new Set<string>())=>{if(!name||seen.has(name))return;seen.add(name);wanPhysical.add(name);const layer=layers.find(i=>i.name===name);if(layer?.interface)visit(layer.interface,seen);};
+ for(const name of wans)visit(name);
+ // PPPoE transport ports are uplinks even if the WAN selection is stale or
+ // their logical interfaces have not yet appeared in the WAN list.
+ for(const client of pppoe)if(!truth(client.disabled)&&client.interface)visit(client.interface);
  const ports=iface.filter(x=>x.type==='ether'&&!wanPhysical.has(x.name)&&(running(x.name)||devices.some(d=>d.pinned!==false&&d.parentId==='port:'+x.name)));
  const visiblePorts=new Set(ports.map(p=>'port:'+p.name));
  const nodes:MapNode[]=[{id:'router',name:data.metrics?.identity||data.project?.model||'MikroTik',subtitle:data.metrics?.resource?.['board-name']||'Router tổng',type:'router',kind:'router',x:0,y:230,width:210,height:170,up:fresh}];

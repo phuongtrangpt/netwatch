@@ -1,3 +1,8 @@
+# 1.0.13
+
+- Bỏ nhánh cổng vật lý dùng làm đường truyền PPPoE khỏi phần nhánh LAN, hỗ trợ cả PPPoE qua VLAN và khi danh sách WAN chưa đồng bộ.
+- Hiển thị phiên bản gói đang chạy trên thanh đầu trang, chân trang và trang đăng nhập; dùng số phiên bản từ gói ứng dụng.
+
 # 1.0.12
 
 - Thêm tùy chọn nhắc WAN một lần, mỗi 30 phút hoặc mỗi giờ tại Cấu hình giám sát; cấu hình riêng theo dự án.
