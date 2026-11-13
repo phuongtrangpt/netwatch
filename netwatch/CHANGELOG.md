@@ -1,4 +1,4 @@
-# 1.0.8
+# 1.0.9
 
 - Sửa trang trắng sau đăng nhập trên Windows: phục vụ JavaScript/CSS đúng với dấu phân cách đường dẫn của hệ điều hành.
 - Kiểm tra gói Windows bằng đăng nhập thật và tải các tài nguyên giao diện sau đăng nhập.

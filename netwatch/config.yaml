@@ -1,5 +1,5 @@
 name: NetWatch Local
-version: "1.0.8"
+version: "1.0.9"
 slug: netwatch_local
 description: Giám sát MikroTik RB5009 và E50UG, lưu dữ liệu cục bộ
 arch:
