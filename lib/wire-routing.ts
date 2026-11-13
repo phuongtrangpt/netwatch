@@ -29,6 +29,9 @@ export function fixedLayout(nodes:MapNode[],positions:PositionMap){
 export function compactPorts(nodes:MapNode[]){
  const result=nodes.map(n=>({...n}));const removed=new Set<string>();
  for(const port of result.filter(n=>n.kind==='port')){const parent=result.find(n=>n.id===port.parentId);if(!parent)continue;const children=result.filter(n=>n.parentId===port.id);
+  // Do not draw dangling interface stubs: a port junction only represents
+  // an actual visible downstream branch. This also handles partial PPPoE data.
+  if(!children.length){removed.add(port.id);continue;}
   if(children.length===1){children[0].parentId=parent.id;children[0].portName=port.name;removed.add(port.id);continue;}
   const right=!children.length||children.reduce((a,c)=>a+c.x+c.width/2,0)/children.length>=parent.x+parent.width/2;
   port.x=right?parent.x+parent.width+44:Math.max(8,parent.x-44);const centers=children.map(c=>c.y+c.height/2);port.y=centers.length?Math.min(...centers):parent.y+30+result.filter(n=>n.kind==='port').indexOf(port)*18;port.height=centers.length?Math.max(2,Math.max(...centers)-port.y):2;

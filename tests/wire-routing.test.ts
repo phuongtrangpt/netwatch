@@ -25,3 +25,19 @@ it('projects dragged endpoints onto each side and clamps extreme positions to th
 it('rejects malformed anchors and ignores bindings from a previous logical parent',()=>{assert.ok(validateAnchors({'edge-device-a':{source:{nodeId:'router',side:'middle',offset:.5}}}));assert.ok(validateAnchors({'edge-device-a':{target:{nodeId:'device-a',side:'top',offset:2}}}));const nodes=[d('router',40,200),d('device-a',600,200,'router')],wire=graphWires(nodes)[0];assert.deepEqual(wireAnchors(nodes,wire,{'edge-device-a':{source:{nodeId:'old-switch',side:'top',offset:.3}}}),wireAnchors(nodes,wire));});
 
 it('honors an anchor moved away from existing bend points without reversing into its device',()=>{const nodes=[d('router',120,240),d('device-a',700,240,'router')],wire=graphWires(nodes)[0],settings={[wire.id]:{source:{nodeId:'router',side:'left' as const,offset:.5},target:{nodeId:'device-a',side:'right' as const,offset:.5}}},route=routeWires(nodes,[wire],{[wire.id]:[{x:500,y:325}]},settings).routes[wire.id];assert.ok(route[1].x<route[0].x);assert.ok(route[route.length-2].x>route.at(-1)!.x);});
+
+it('removes empty ether1/ether2 stubs even without PPPoE mapping and keeps WAN/LAN positions',()=>{
+ const data={lastSeen:Date.now(),wanNames:['Internet-FPT','Internet-VNPT'],metrics:{stats:[{name:'ether1',running:true},{name:'ether2',running:true},{name:'ether3',running:true},{name:'Internet-FPT',running:true},{name:'Internet-VNPT',running:true}]},sections:{interfaces:[{name:'ether1',type:'ether',running:true},{name:'ether2',type:'ether',running:true},{name:'ether3',type:'ether',running:true}]}};
+ const devices=[{id:'device-lan',name:'Switch LAN',ip:'10.0.0.2',type:'switch',parentId:'port:ether3',enabled:true,pinned:true}];
+ const graph=topologyLayout(data,devices);
+ const positions=positionSnapshot(graph.nodes);positions.router={x:420,y:300};positions['device-lan']={x:820,y:350};
+ const compact=compactPorts(fixedLayout(graph.nodes,positions));
+ assert.ok(!compact.some(n=>n.id==='port:ether1'||n.id==='port:ether2'));
+ const wires=graphWires(compact);
+ assert.ok(!wires.some(w=>w.portLabel==='ether1'||w.portLabel==='ether2'));
+ assert.equal(wires.filter(w=>w.wan).length,2);
+ assert.equal(wires.find(w=>w.target==='device-lan')?.portLabel,'ether3');
+ for(const n of compact.filter(n=>n.kind!=='port'))assert.deepEqual({x:n.x,y:n.y},positions[n.id]);
+ const multiple=compactPorts(topologyLayout(data,[...devices,{...devices[0],id:'device-lan2',ip:'10.0.0.3'}]).nodes);
+ assert.ok(multiple.some(n=>n.id==='port:ether3'),'Populated LAN junction is retained');
+});

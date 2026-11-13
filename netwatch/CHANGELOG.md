@@ -1,3 +1,8 @@
+# 1.0.15
+
+- Không vẽ nhánh cổng rỗng trên sơ đồ: loại các đoạn ether1/ether2 bị thừa khi PPPoE chưa có ánh xạ cổng vật lý.
+- Giữ nguyên hai nhánh WAN, nhánh LAN có thiết bị phía sau và vị trí biểu tượng đã lưu. Chỉ thay đổi hiển thị sơ đồ, không đổi cấu hình router.
+
 # 1.0.14
 
 - Thống nhất tiêu đề Telegram có tên dự án cho cảnh báo WAN/thiết bị/router, tin phục hồi và nhắc lại.
