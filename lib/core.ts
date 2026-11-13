@@ -33,6 +33,7 @@ export function secret(){return [...crypto.getRandomValues(new Uint8Array(32))].
 export function ingestError(b:any):string|null{
  if(!b||b.schema!==1)return 'schema must be 1';
  if(b.kind==='probes'){if(!Array.isArray(b.results)||b.results.length>16||b.results.some((p:any)=>!p||typeof p.id!=='string'||typeof p.ip!=='string'||p.sent!==2||!Number.isInteger(p.received)||p.received<0||p.received>2||(p.error!==undefined&&typeof p.error!=='boolean')))return 'Invalid ping results';return null;}
+ if(b.kind==='wan-probes'){if(!Array.isArray(b.results)||b.results.length>8||b.results.some((p:any)=>!p||typeof p.interface!=='string'||p.interface.length>100||p.sent!==2||!Number.isInteger(p.received)||p.received<0||p.received>2||(p.error!==undefined&&typeof p.error!=='boolean')))return 'Invalid WAN ping results';return null;}
  if(b.kind==='metrics'){if(!b.resource||typeof b.resource!=='object'||!Array.isArray(b.stats)||b.stats.length>512)return 'Invalid metrics';return null;}
  if(b.kind!=='section'||!SECTIONS.includes(b.section)||!Array.isArray(b.rows)||b.rows.length>50||!Number.isInteger(b.part)||b.part<0||b.part>200||typeof b.generation!=='string'||b.generation.length>80||typeof b.final!=='boolean')return 'Invalid section';return null;
 }

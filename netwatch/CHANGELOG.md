@@ -1,3 +1,11 @@
+# 1.0.5
+
+- Chọn interface cho từng line WAN; từ hai line trở lên, kiểm tra Internet riêng bằng ping 8.8.8.8 qua interface đã chọn.
+- Hiển thị riêng trạng thái Link và Internet; xác nhận mất line sau hai chu kỳ ping liên tiếp thất bại.
+- Cảnh báo Telegram theo từng dự án khi WAN mất/phục hồi Internet hoặc router ngừng/gửi dữ liệu trở lại.
+- Lưu Bot Token đã mã hóa trong `/data`; Viewer không truy cập hoặc thay đổi cấu hình Telegram.
+- Bộ cài và nâng cấp collector v5 giữ nguyên khóa, không thay đổi cấu hình mạng trên MikroTik.
+
 # 1.0.4
 
 - Chuyển Docker base sang Node.js 22 LTS Alpine để hỗ trợ an toàn ba kiến trúc, gồm ARMv7.
