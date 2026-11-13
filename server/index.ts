@@ -14,7 +14,7 @@ import * as upgrade from '../app/api/upgrade/route';
 import * as ingest from '../app/api/ingest/route';
 import * as telegram from '../app/api/telegram/route';
 import * as profile from '../app/api/profile/route';
-import {sendTelegram} from './telegram';
+import {sendTelegram,retryTelegramAlerts} from './telegram';
 import {sendScheduledTelegramSummary} from './telegram-summary';
 import {scopedKey} from '../lib/projects';
 const routes:any={dashboard,projects,config,topology,pair,upgrade,ingest,telegram,profile};
@@ -135,9 +135,10 @@ const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.end(method==='HEAD'?undefined:await readFile(file));
  }catch(error){console.error('Request failed:',error instanceof Error?error.message:'error');if(!res.headersSent)res.writeHead(500);res.end('Internal error');}
 });
+void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry:',error instanceof Error?error.message:'error'));
 server.requestTimeout=15000;server.headersTimeout=10000;
 server.listen(port,'0.0.0.0',()=>console.log(`NetWatch listening on :${port}; dữ liệu: ${process.env.DATA_DIR||'/data'}`));
 const checkRouterHeartbeat=()=>{try{const now=Date.now(),routers=sqlite.prepare('SELECT r.id,r.last_seen,p.name FROM router r LEFT JOIN projects p ON p.id=r.id WHERE r.last_seen IS NOT NULL').all() as any[];for(const r of routers){const key=scopedKey(r.id,'router_alert_state'),row=sqlite.prepare('SELECT value FROM settings WHERE key=?').get(key) as any,offline=now-r.last_seen>180000,online=!offline,previous=row?JSON.parse(row.value):null;if(previous&&previous.online===online)continue;sqlite.prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify({online,at:now}));if(row||offline){const label=r.name||'Mạng chính';const message=offline?`Router không gửi dữ liệu trong hơn 3 phút: ${label}`:`Router đã gửi dữ liệu trở lại: ${label}`;sqlite.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').run(crypto.randomUUID(),now,offline?'warning':'info',message,r.id);void sendTelegram(db,r.id,`${offline?'🔴':'🟢'} NetWatch · ${label}\n${message}`);}}}catch(error){console.error('NetWatch heartbeat monitor:',error instanceof Error?error.message:'error');}};
-const heartbeatTimer=setInterval(checkRouterHeartbeat,30000);heartbeatTimer.unref();
+const heartbeatTimer=setInterval(()=>{checkRouterHeartbeat();void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry:',error instanceof Error?error.message:'error'));},30000);heartbeatTimer.unref();
 const summaryTimer=setInterval(()=>{void sendScheduledTelegramSummary().catch(error=>console.error('NetWatch Telegram summary:',error instanceof Error?error.message:'error'));},30000);summaryTimer.unref();
 for(const signal of ['SIGTERM','SIGINT']as const)process.on(signal,()=>{clearInterval(heartbeatTimer);clearInterval(summaryTimer);server.close(()=>{sqlite.pragma('wal_checkpoint(TRUNCATE)');sqlite.close();process.exit(0);});setTimeout(()=>process.exit(1),10000).unref();});

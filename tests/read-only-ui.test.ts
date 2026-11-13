@@ -19,3 +19,13 @@ test('project selector stays available while viewer create/edit controls are hid
  assert.doesNotMatch(html,/RB5009|E50UG|Raspberry Pi/);
  const bs=buttons(html);assert.match(bs.find(b=>b.text.includes('Thêm dự án'))!.attrs,/hidden/);assert.doesNotMatch(bs.find(b=>b.text.includes('Mở dự án'))!.attrs,/hidden|disabled/);
 });
+
+test('owner topology starts locked while inspection controls remain usable',()=>{
+ const html=renderToStaticMarkup(React.createElement(Topology,{data,demo:false,onRefresh:()=>{},onConnect:()=>{},notify:()=>{}}));
+ const bs=buttons(html);
+ for(const name of ['Thêm switch ảo','Thêm IP theo dõi','Gỡ rối dây','Tự sắp xếp'])assert.match(bs.find(b=>b.text===name)!.attrs,/disabled/,name);
+ assert.doesNotMatch(bs.find(b=>b.text==='Chỉnh sơ đồ')!.attrs,/disabled|hidden/);
+ assert.match(bs.find(b=>b.text==='Chỉnh sơ đồ')!.attrs,/aria-pressed="false"/);
+ assert.doesNotMatch(bs.find(b=>b.text.includes('Toàn màn hình'))!.attrs,/disabled|hidden/);
+ assert.match(html,/Đã khóa/);
+});

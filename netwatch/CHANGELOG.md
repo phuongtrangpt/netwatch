@@ -1,3 +1,10 @@
+# 1.0.11
+
+- Sơ đồ mặc định khóa: chỉ bật kéo thả, thêm/xóa/sửa thiết bị, ghim, ping, tự sắp xếp và chỉnh dây sau khi bấm Chỉnh sơ đồ. Xong chỉnh sơ đồ khóa lại; đổi dự án cũng khóa lại.
+- Gửi cảnh báo Telegram khi interface WAN mất/phục hồi Link, kể cả một WAN hoặc collector chưa gửi ping WAN; các sự kiện cổng LAN không gửi dưới dạng WAN.
+- Sửa xác nhận ping Internet: chỉ báo mất sau hai lần thất bại liên tiếp, không báo phục hồi ở lần thất bại đầu và không lặp cảnh báo mất khi WAN vẫn offline.
+- Lưu hàng đợi Telegram riêng từng Chat ID, thử lại khi gửi lỗi và sau khởi động lại, tối đa 24 giờ; ghi nhận gửi lỗi trong nhật ký.
+
 # 1.0.10
 
 - Thống nhất giao diện và hướng dẫn cho MikroTik và máy chủ NetWatch; model chỉ xuất hiện trong phần chọn thiết bị khi thêm/sửa dự án.

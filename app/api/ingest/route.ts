@@ -1,7 +1,8 @@
 import {refreshDiscovery} from '../../../lib/discovery';
 import {database,json} from '../../../lib/server';
-import {sha256,ingestError,list,truth,rates} from '../../../lib/core';
+import {sha256,ingestError,list,truth,rates,wanNames} from '../../../lib/core';
 import {projectId,scopedKey} from '../../../lib/projects';
+import {wanProbeTransition} from '../../../lib/wan-alerts';
 import {sendTelegram} from '../../../server/telegram';
 export async function POST(req:Request){try{
  const auth=req.headers.get('authorization');if(!auth?.startsWith('Bearer '))return json({error:'Unauthorized'},401);
@@ -16,14 +17,31 @@ export async function POST(req:Request){try{
   const wanConfig=await read('wan',{wans:[],aliases:{},manual:false});if(wanConfig.manual&&Array.isArray(wanConfig.wans)&&wanConfig.wans.length>=2)wanTargets=[...new Set(wanConfig.wans)].slice(0,8).filter((n:string)=>list(body.stats).some((s:any)=>s.name===n)).map((n:string)=>({interface:n}));
   statements.push(db.prepare('UPDATE router SET previous=metrics,previous_at=last_seen,metrics=?,last_seen=? WHERE id=?').bind(JSON.stringify(body),now,id));
   statements.push(id==='main'?db.prepare('INSERT INTO history(minute,data) VALUES (?,?) ON CONFLICT(minute) DO UPDATE SET data=excluded.data').bind(minute,data):db.prepare('INSERT INTO project_history(project_id,minute,data) VALUES (?,?,?) ON CONFLICT(project_id,minute) DO UPDATE SET data=excluded.data').bind(id,minute,data));
-  if(prev)for(const s of list(body.stats)){const old=list(prev.stats).find(x=>x.name===s.name);if(old&&old.running!==undefined&&s.running!==undefined&&truth(old.running)!==truth(s.running))statements.push(event(truth(s.running)?'info':'warning',`${s.name}: ${truth(s.running)?'có kết nối':'mất kết nối'}`));}
+  let selectedWans:string[]=Array.isArray(wanConfig.wans)&&wanConfig.manual?wanConfig.wans:[];
+  if(!wanConfig.manual){
+   const keys=['wanmembers','pppoe','dhcpclients','routes','interfaces','vlans'].map(k=>scopedKey(id,k));
+   const rows:any=await db.prepare(`SELECT c.name,c.data FROM section_chunks c JOIN section_heads h ON c.name=h.name AND c.generation=h.generation WHERE c.name IN (${keys.map(()=>'?').join(',')}) ORDER BY c.name,c.part`).bind(...keys).all();
+   const sections:Record<string,any[]>={};for(const row of rows.results){const key=id==='main'?row.name:row.name.slice(id.length+1);(sections[key]||=[]).push(...JSON.parse(row.data));}selectedWans=wanNames(sections);
+  }
+  if(prev)for(const s of list(body.stats)){
+   const old=list(prev.stats).find(x=>x.name===s.name);
+   if(old&&old.running!==undefined&&s.running!==undefined&&truth(old.running)!==truth(s.running)){
+    const online=truth(s.running);statements.push(event(online?'info':'warning',`${s.name}: ${online?'có kết nối':'mất kết nối'}`));
+    if(selectedWans.includes(s.name)){
+     const label=String(wanConfig.aliases?.[s.name]||s.name);
+     telegramAlerts.push(`${online?'🟢':'🔴'} WAN ${label} (${s.name}): ${online?'Link đã phục hồi':'Link mất kết nối'}. Đây là trạng thái interface, chưa xác nhận Internet bằng ping.`);
+    }
+   }
+  }
  }else if(body.kind==='wan-probes'){
   const config=await read('wan',{wans:[],aliases:{},manual:false});const expected=!!config.manual&&Array.isArray(config.wans)?[...new Set(config.wans)].slice(0,8):[];if(expected.length<2)return json({error:'WAN checks require at least two manually selected interfaces'},409);
   const metricNames=new Set(list(router.metrics?JSON.parse(router.metrics).stats:[]).map((x:any)=>x.name));if(expected.some((n:string)=>!metricNames.has(n)))return json({error:'A selected WAN interface is not present on this router'},409);
   const old=await read('wan_probe_latest',{results:[]});if(old.at&&now-old.at<20000)return json({error:'Wait 20 seconds between WAN probes'},429);const results:any[]=[],seen=new Set<string>();
-  for(const p of body.results){if(!expected.includes(p.interface)||seen.has(p.interface))return json({error:'Unconfigured or duplicate WAN interface'},400);seen.add(p.interface);const prior=old.results.find((x:any)=>x.interface===p.interface),continuous=prior&&now-prior.at<150000,failed=!!p.error||p.received===0,failures=failed?(continuous?(prior.failures||0)+1:1):0,status=failed?(failures>=2?'offline':'checking'):'online';const label=String(config.aliases?.[p.interface]||p.interface);const result={interface:p.interface,label,status,failures,received:p.received,error:!!p.error,at:now,lastSuccessAt:!failed?now:prior?.lastSuccessAt||null};results.push(result);
-   if(prior&&now-prior.at<150000&&prior.status!=='checking'&&status!==prior.status){const down=status==='offline';const message=`${label} (${p.interface}): ${down?'mất kết nối Internet':'Internet đã kết nối trở lại'}`;statements.push(event(down?'warning':'info',message));telegramAlerts.push(`${down?'🔴':'🟢'} ${message}`);}
-   else if(prior&&prior.status==='checking'&&status==='offline'){const message=`${label} (${p.interface}): mất kết nối Internet sau 2 lần kiểm tra thất bại`;statements.push(event('warning',message));telegramAlerts.push(`🔴 ${message}`);}
+  for(const p of body.results){if(!expected.includes(p.interface)||seen.has(p.interface))return json({error:'Unconfigured or duplicate WAN interface'},400);seen.add(p.interface);const prior=old.results.find((x:any)=>x.interface===p.interface);
+   const {status,confirmedStatus,failures,transition}=wanProbeTransition(prior,p,now);
+   const label=String(config.aliases?.[p.interface]||p.interface);
+   results.push({interface:p.interface,label,status,confirmedStatus,failures,received:p.received,error:!!p.error,at:now,lastSuccessAt:status==='online'?now:prior?.lastSuccessAt||null});
+   if(transition){const down=transition==='offline';const message=`${label} (${p.interface}): ${down?'mất kết nối Internet sau 2 lần kiểm tra thất bại':'Internet đã kết nối trở lại'}`;statements.push(event(down?'warning':'info',message));telegramAlerts.push(`${down?'🔴':'🟢'} ${message}`);}
   }
   statements.push(db.prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind(scopedKey(id,'wan_probe_latest'),JSON.stringify({at:now,results:[...old.results.filter((x:any)=>!seen.has(x.interface)),...results]})));
  }else if(body.kind==='probes'){

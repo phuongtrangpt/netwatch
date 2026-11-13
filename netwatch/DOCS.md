@@ -69,3 +69,15 @@ Trong **Cấu hình giám sát → Hồ sơ quản trị viên**, nhập tên s�
 6. Bản tin tổng hợp mặc định gửi lúc 08:00 giờ Việt Nam đến Chat ID Admin. Bản tin liệt kê tình trạng các router/dự án, thiết bị và line đang lỗi, cùng các sự cố trong 24 giờ trước. Có thể đổi giờ hoặc tắt trong cấu hình Mạng chính.
 7. Nhắn `/start` cho bot cá nhân; thêm bot vào nhóm trước khi gửi thử. Cấu hình từ 1.0.5 được giữ và có thể dùng làm kênh Admin khi lưu thiết lập mới. Chat ID nhóm phải nhập riêng.
 8. Router đang dùng collector cũ cần nâng cấp một lần: tải `netwatch-upgrade-v5.rsc` từ **Kết nối router**, đưa file vào WinBox → Files, sau đó chạy `/import file-name=netwatch-upgrade-v5.rsc`. Lệnh giữ nguyên khóa cũ và chỉ thay script NetWatch. Router mới tải bộ cài v5.
+
+## Khóa sơ đồ và cảnh báo WAN (1.0.11)
+
+Sơ đồ mặc định ở chế độ khóa. Bấm **Chỉnh sơ đồ** để thêm/xóa/sửa thiết bị, đổi vị trí, ghim, bật/tắt ping, tự sắp xếp hoặc chỉnh dây. Bấm **Xong chỉnh sơ đồ** để khóa lại. Khi khóa vẫn xem chi tiết, di chuyển khung nhìn, phóng to và toàn màn hình. Chuyển dự án hoặc mở lại trang sẽ khóa lại.
+
+NetWatch phân biệt **Link** (interface mất/phục hồi kết nối) và **Internet** (ping riêng từng WAN). Link WAN được cảnh báo khi bản tin metrics xác nhận trạng thái đổi; WAN lấy từ cấu hình chọn thủ công hoặc thông tin WAN tự nhận diện. Chỉ interface được nhận diện là WAN mới gửi cảnh báo Link; không gửi cảnh báo WAN cho mọi cổng LAN.
+
+Ping Internet riêng từng WAN vẫn cần chọn thủ công ít nhất hai interface và collector v5. Sau hai chu kỳ thất bại liên tiếp mới xác nhận mất Internet; gửi tin phục hồi sau khi ping thành công trở lại. Nếu collector cũ chưa gửi WAN probes, cập nhật collector bằng bản v5 giữ nguyên khóa tại Kết nối router.
+
+Khi gửi cảnh báo lỗi, từng Chat ID có hàng đợi riêng trong dữ liệu ứng dụng. NetWatch ghi nhật ký gửi lỗi và thử lại từ 30 giây, giãn dần tối đa 5 phút, trong tối đa 24 giờ; hàng đợi còn sau khởi động lại. Tin thử gửi bằng nút Gửi thử không đưa vào hàng đợi.
+
+Nếu cả router và máy chủ NetWatch mất toàn bộ Internet, Telegram không thể đến ngay: máy chủ cần kết nối trở lại để gửi, và các sự kiện chưa từng được router gửi tới máy chủ không thể suy ra chính xác. Hai loại cảnh báo Link và Internet có thể xuất hiện riêng vì phản ánh hai phép kiểm tra khác nhau.

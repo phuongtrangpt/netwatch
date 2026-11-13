@@ -99,3 +99,48 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   assert.equal((await api('/api/support',tenant.cookie,{enabled:false})).status,403);
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });
+
+test('WAN link/probe alerts reach each Telegram destination, failed groups retry after restart',async()=>{
+ const {writeFileSync,appendFileSync,existsSync}=await import('node:fs');
+ const {default:Database}=await import('better-sqlite3');
+ const data=mkdtempSync(join(tmpdir(),'netwatch-wan-'));
+ const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=probe.address().port;await new Promise(r=>probe.close(r));
+ const origin=`http://127.0.0.1:${port}`,log=join(data,'sent.jsonl'),mock=join(data,'mock.mjs');let child,db,output='';
+ writeFileSync(mock,`import {appendFileSync,existsSync,writeFileSync} from 'node:fs';
+ const original=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{if(String(url).startsWith('https://api.telegram.org/bot')){const body=JSON.parse(options.body);appendFileSync(${JSON.stringify(log)},JSON.stringify(body)+'\\n');const marker=${JSON.stringify(join(data,'group-failed'))};if(body.chat_id==='-10099'&&!existsSync(marker)){writeFileSync(marker,'1');return new Response(JSON.stringify({ok:false}),{status:503});}return new Response(JSON.stringify({ok:true}),{status:200});}return original(url,options);};`);
+ const messages=()=>existsSync(log)?readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)):[];
+ async function start(){child=spawn(process.execPath,['--import',mock,'dist/server.mjs'],{env:{...process.env,DATA_DIR:data,PORT:String(port),NETWATCH_PASSWORD:'test-password-12345'},stdio:['ignore','pipe','pipe']});child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x);for(let i=0;i<100;i++){try{if((await fetch(origin+'/healthz')).ok)return;}catch{}await new Promise(r=>setTimeout(r,40));}throw Error(output);}
+ async function stop(){child.kill('SIGTERM');await once(child,'exit');}
+ try{
+  await start();db=new Database(join(data,'netwatch.db'));
+  const login=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(login.status,303);const cookie=login.headers.get('set-cookie').split(';')[0];
+  const api=(path,body)=>fetch(origin+path,{method:'POST',headers:{origin,cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  assert.equal((await api('/api/config',{wans:['ether1','ether2'],aliases:{ether1:'FPT',ether2:'VNPT'},manual:true})).status,200);
+  assert.equal((await api('/api/telegram',{scope:'global',action:'save',ownerChatId:'12345',botToken:'12345:'+ 'a'.repeat(25),summaryEnabled:false,summaryTime:'08:00'})).status,200);
+  assert.equal((await api('/api/telegram',{scope:'project',action:'save',enabled:true,chatId:'-10099'})).status,200);
+  const paired=await api('/api/pair',{version:'7.20.4'});const token=(await paired.text()).match(/Authorization: Bearer ([a-f0-9]{64})/)[1];
+  async function ingest(body){db.prepare('UPDATE router SET last_seen=? WHERE id=?').run(Date.now()-30000,'main');if(body.kind==='wan-probes'){const row=db.prepare("SELECT value FROM settings WHERE key='wan_probe_latest'").get();if(row){const value=JSON.parse(row.value);value.at=Date.now()-30000;value.results.forEach(x=>x.at=value.at);db.prepare("UPDATE settings SET value=? WHERE key='wan_probe_latest'").run(JSON.stringify(value));}}const r=await fetch(origin+'/api/ingest',{method:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({schema:1,...body})});assert.equal(r.status,200,await r.text());}
+  const metrics=(up,lan=true)=>({kind:'metrics',resource:{uptime:'1h','cpu-load':5},stats:[{name:'ether1',running:up},{name:'ether2',running:true},{name:'ether3',running:lan}]});
+  await ingest(metrics(true));assert.equal(messages().length,0,'Initial sample is not a link change');
+  await ingest(metrics(false));assert.equal(messages().length,2);assert.ok(messages().every(m=>m.text.includes('WAN FPT')&&m.text.includes('Link mất kết nối')));
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM settings WHERE key LIKE 'telegram_outbox:%'").get().n,1,'Only failed group delivery remains queued');
+  assert.ok(db.prepare("SELECT message FROM events WHERE message LIKE 'Telegram chưa gửi được%' ").get());
+  const queued=db.prepare("SELECT key,value FROM settings WHERE key LIKE 'telegram_outbox:%'").get();const item=JSON.parse(queued.value);item.nextAttemptAt=0;db.prepare('UPDATE settings SET value=? WHERE key=?').run(JSON.stringify(item),queued.key);
+  await stop();await start();for(let i=0;i<50&&messages().length<3;i++)await new Promise(r=>setTimeout(r,20));assert.equal(messages().length,3);assert.equal(messages()[2].chat_id,'-10099');
+  for(let i=0;i<50&&db.prepare("SELECT COUNT(*) n FROM settings WHERE key LIKE 'telegram_outbox:%'").get().n;i++)await new Promise(r=>setTimeout(r,20));
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM settings WHERE key LIKE 'telegram_outbox:%'").get().n,0);
+  await ingest(metrics(false));assert.equal(messages().length,3,'No repeated Link down alert');
+  await ingest(metrics(false,false));assert.equal(messages().length,3,'LAN events do not generate WAN alerts');
+  await ingest(metrics(true,false));assert.equal(messages().length,5);assert.ok(messages().slice(-2).every(m=>m.text.includes('Link đã phục hồi')));
+  const probes=received=>({kind:'wan-probes',results:[{interface:'ether1',sent:2,received},{interface:'ether2',sent:2,received:2}]});
+  await ingest(probes(2));await ingest(probes(0));assert.equal(messages().length,5,'First ping failure must not send false recovery');
+  await ingest(probes(0));assert.equal(messages().length,7);assert.ok(messages().slice(-2).every(m=>m.text.includes('mất kết nối Internet')));
+  await ingest(probes(0));assert.equal(messages().length,7);
+  await ingest(probes(2));assert.equal(messages().length,9);assert.ok(messages().slice(-2).every(m=>m.text.includes('Internet đã kết nối trở lại')));
+  // Automatic WAN discovery also works for a single WAN, without enabling multi-WAN probes.
+  await api('/api/config',{wans:[],aliases:{},manual:false});
+  await ingest({kind:'section',section:'wanmembers',generation:'wan-test',part:0,final:true,rows:[{list:'WAN',interface:'ether1'}]});
+  await ingest(metrics(false,false));assert.equal(messages().length,11);
+ }finally{if(child&&child.exitCode===null)await stop();db?.close();rmSync(data,{recursive:true,force:true});}
+});
