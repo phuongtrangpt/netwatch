@@ -4,9 +4,26 @@ Chạy trên Windows, Linux, macOS hoặc Home Assistant OS, lưu dữ liệu t�
 Sơ đồ mạng kéo thả, ghim/alias, switch ảo, chỉnh neo/đường dây, nhiều dự án MikroTik,
 DHCP/PPPoE và lịch sử lưu cục bộ trong `/data`.
 
+[![Bản phát hành](https://img.shields.io/github/v/release/phuongtrangpt/netwatch?label=Phi%C3%AAn%20b%E1%BA%A3n)](https://github.com/phuongtrangpt/netwatch/releases/latest)
+[![Lượt tải gói phát hành](https://img.shields.io/github/downloads/phuongtrangpt/netwatch/total?label=L%C6%B0%E1%BB%A3t%20t%E1%BA%A3i&color=208368)](https://github.com/phuongtrangpt/netwatch/releases)
+[![Kiểm tra](https://github.com/phuongtrangpt/netwatch/actions/workflows/build.yml/badge.svg)](https://github.com/phuongtrangpt/netwatch/actions/workflows/build.yml)
+
+![Minh họa tổng quan tính năng NetWatch với dữ liệu mẫu](docs/images/overview.svg)
+
+*Hình minh họa tính năng bằng dữ liệu mẫu, không phải ảnh chụp một hệ thống đang vận hành.*
+
+- Theo dõi tài nguyên MikroTik, WAN, LAN/VLAN, thiết bị và PPPoE.
+- Sơ đồ kéo thả, ghim thiết bị và theo dõi IP quan trọng.
+- Cảnh báo Telegram khi có sự cố, nhắc lại theo cấu hình.
+- Nhiều dự án, tài khoản chỉ xem và dữ liệu lưu tại máy chủ của bạn.
+
+**[Tải gói Windows x64](https://github.com/phuongtrangpt/netwatch/releases/latest)** · **[Hướng dẫn cài và cấu hình](netwatch/DOCS.md)**
+
 [Thêm kho NetWatch vào Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fphuongtrangpt%2Fnetwatch)
 
-## Cài online trên HAOS
+## Cài online trên Home Assistant OS
+
+![Hướng dẫn cài NetWatch trên Home Assistant OS](docs/images/install-home-assistant.svg)
 
 1. Chờ workflow trong tab **Actions** hoàn tất thành công.
 2. Chỉ ở lần đầu, chủ kho mở package **netwatch** trên GitHub → Package settings →
@@ -34,6 +51,8 @@ Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_T
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
 ## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.10)
+
+![Hướng dẫn cài NetWatch trên Windows x64](docs/images/install-windows.svg)
 
 - **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.10.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
 - **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.10` hoặc `compose.yaml`.
@@ -90,3 +109,10 @@ Không cần cài lại collector trên MikroTik khi giữ nguyên dữ liệu, 
 ## Quyền router trước khi kết nối
 
 KTV kiểm tra `fetch` và `scheduler` trong device-mode. Nếu bị tắt, bật bằng `/system device-mode update fetch=yes scheduler=yes` và xác nhận vật lý theo hướng dẫn tại **Kết nối router** hoặc [hướng dẫn chi tiết](netwatch/DOCS.md#ktv-bật-fetch-và-scheduler-trước-khi-cài-collector). Router sẽ khởi động lại; không cần đổi toàn bộ mode.
+
+## Theo dõi lượt tải và lượt truy cập GitHub
+
+- Huy hiệu **Lượt tải** ở đầu README tự cập nhật tổng số lần tải các file đính kèm trong GitHub Releases. Đây là **lượt tải**, không phải số người dùng riêng biệt hoặc số bản cài đang hoạt động. Không bao gồm ZIP Source code hoặc lượt kéo image Docker/GHCR.
+- Xem từng file bằng [GitHub Releases API](https://api.github.com/repos/phuongtrangpt/netwatch/releases?per_page=100), trường `assets[].download_count`. API phân trang nếu có nhiều hơn 100 bản phát hành.
+- Chủ kho có thể mở [Insights → Traffic](https://github.com/phuongtrangpt/netwatch/graphs/traffic) để xem lượt xem, khách truy cập và lượt clone trong 14 ngày gần nhất. Clone không đồng nghĩa đã cài NetWatch.
+- Tài liệu: [Release assets](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases), [Repository traffic](https://docs.github.com/en/repositories/viewing-activity-and-data-for-your-repository/viewing-traffic-to-a-repository).
