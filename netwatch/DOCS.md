@@ -33,6 +33,10 @@ Tài khoản chỉ xem. Bật và đặt tên/mật khẩu riêng để chia s�
 mọi dự án, không chỉnh sửa, không nhận bộ cài router. Có thể tắt/đổi mật khẩu trên
 web để thu hồi phiên xem. Không phải sửa Configuration của add-on để tạo viewer.
 
+## Tên hiển thị quản trị viên (1.0.7)
+
+Trong **Cấu hình giám sát → Hồ sơ quản trị viên**, nhập tên sẽ hiển thị ở thanh bên. Thiết lập được lưu riêng trong dữ liệu của bản cài. Tên đăng nhập `admin` và mật khẩu không thay đổi.
+
 ## Kiểm tra WAN và cảnh báo Telegram (1.0.6)
 
 1. Trong **Cấu hình giám sát → Chọn interface cho từng đường WAN**, bật chọn thủ công, chọn mỗi interface đại diện cho một line rồi lưu. Với PPPoE, chọn interface PPPoE client. Chỉ dự án có ít nhất hai line được chọn mới ping kiểm tra từng line.

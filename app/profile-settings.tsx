@@ -1,0 +1,9 @@
+import {useEffect,useState} from 'react';
+import {Check,LoaderCircle,UserRound} from 'lucide-react';
+
+export default function AdminProfileSettings({onSaved}:{onSaved:(name:string)=>void}){
+ const [name,setName]=useState('Quản trị viên'),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+ useEffect(()=>{let alive=true;fetch('/api/profile').then(async r=>{const d:any=await r.json();if(!r.ok)throw Error(d.error);if(alive){setName(d.displayName||'Quản trị viên');onSaved(d.displayName||'Quản trị viên');}}).catch(e=>alive&&setNotice(e.message||'Không tải được hồ sơ Admin.'));return()=>{alive=false;};},[]);
+ async function save(){setBusy(true);setNotice('');try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:name})}),d:any=await r.json();if(!r.ok)throw Error(d.error);setName(d.displayName);onSaved(d.displayName);setNotice('Đã lưu tên hiển thị Admin.');}catch(e:any){setNotice(e.message||'Không lưu được tên hiển thị.');}finally{setBusy(false);}}
+ return <section className="panel settings-panel"><div className="panel-heading"><div><h2><UserRound size={19}/> Hồ sơ quản trị viên</h2><p>Đổi tên hiển thị trên giao diện của riêng bản cài này.</p></div><UserRound size={20}/></div><div className="settings-body"><label className="field-label">Tên hiển thị Admin<input className="version-input" value={name} onChange={e=>setName(e.target.value)} maxLength={40} placeholder="Ví dụ: Quản trị mạng"/></label><p className="field-help">Tên này xuất hiện ở hồ sơ trên thanh bên. Tên đăng nhập vẫn là <code>admin</code>; mật khẩu không thay đổi.</p>{notice&&<p className="step-note">{notice}</p>}<button className="button primary" disabled={busy||!name.trim()} onClick={save}>{busy?<LoaderCircle size={16} className="spin"/>:<Check size={16}/>}Lưu tên Admin</button></div></section>;
+}

@@ -13,10 +13,11 @@ import * as pair from '../app/api/pair/route';
 import * as upgrade from '../app/api/upgrade/route';
 import * as ingest from '../app/api/ingest/route';
 import * as telegram from '../app/api/telegram/route';
+import * as profile from '../app/api/profile/route';
 import {sendTelegram} from './telegram';
 import {sendScheduledTelegramSummary} from './telegram-summary';
 import {scopedKey} from '../lib/projects';
-const routes:any={dashboard,projects,config,topology,pair,upgrade,ingest,telegram};
+const routes:any={dashboard,projects,config,topology,pair,upgrade,ingest,telegram,profile};
 const root=resolve('dist/public'),port=Number(process.env.PORT||8080);
 for(const name of ['NETWATCH_INGEST_URL','NETWATCH_PUBLIC_URL'])if(process.env[name]){const u=new URL(process.env[name]!);if(!['http:','https:'].includes(u.protocol)||u.pathname!=='/'||u.search||u.hash||u.username||u.password)throw Error(name+' phải là URL gốc http(s)://HOST:PORT, không có đường dẫn hay thông tin đăng nhập.');process.env[name]=u.origin;}
 const browserOrigin=(req:any,url:URL)=>{
@@ -75,7 +76,7 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
-   if(path==='/api/session'&&method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({role:viewer?'viewer':'owner',username:auth?accountName(auth):null,...(auth==='owner'?{displayName}:{}),permissions:visiblePermissions(auth)}));return;}
    if(path==='/api/support'){
     res.setHeader('Content-Type','application/json');
     if(method==='GET'){const value=getSupport();res.end(JSON.stringify(value));return;}
