@@ -1,7 +1,7 @@
 import {createServer} from 'node:http';
 import {getSupport,saveSupport} from './support';
 import {readFile,stat} from 'node:fs/promises';
-import {resolve,extname} from 'node:path';
+import {resolve,extname,sep} from 'node:path';
 import {db,sqlite} from './database';
 import {requestContext} from '../lib/server';
 import {authenticated,checkLogin,session,loginHTML,accountName,viewerInfo,saveViewer,removeViewer,canView,projectAccess,visiblePermissions} from './auth';
@@ -129,7 +129,7 @@ const server=createServer(async(req,res)=>{
   }
   if(!['GET','HEAD'].includes(method)){res.writeHead(405);res.end();return;}
   let file=resolve(root,'.'+decodeURIComponent(path));
-  if(file!==root&&!file.startsWith(root+'/')){res.writeHead(403);res.end();return;}
+  if(file!==root&&!file.startsWith(root+sep)){res.writeHead(403);res.end();return;}
   try{if(!(await stat(file)).isFile())file=resolve(root,'index.html');}catch{if(extname(file)){res.writeHead(404);res.end();return;}file=resolve(root,'index.html');}
   const mime:any={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2'};
   res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.end(method==='HEAD'?undefined:await readFile(file));

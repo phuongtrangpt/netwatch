@@ -32,7 +32,10 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   await stop();await start();
   r=await api('/api/dashboard');assert.equal(r.status,200);const state=await r.json();assert.equal(state.config.aliases.ether1,'FPT');assert.equal(state.topology.devices[0].name,'WiFi Tầng 2');assert.equal(state.topology.positions['device-aaa'].x,260);assert.equal(state.metrics.resource['cpu-load'],20);assert.equal(state.history.length,1);
   r=await api('/api/projects');assert.equal((await r.json()).projects.length,2);
-  r=await fetch(origin+'/',{headers:{cookie}});assert.equal(r.status,200);assert.ok((await r.text()).includes('/assets/'));
+  r=await fetch(origin+'/',{headers:{cookie}});assert.equal(r.status,200);const html=await r.text();assert.ok(html.includes('/assets/'));
+  const assets=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css))"/g)].map(m=>m[1]);
+  assert.ok(assets.some(p=>p.endsWith('.js')));assert.ok(assets.some(p=>p.endsWith('.css')));
+  for(const asset of assets){const resource=await fetch(new URL(asset,origin),{headers:{cookie}});assert.equal(resource.status,200,asset);assert.match(resource.headers.get('content-type')||'',asset.endsWith('.js')?/javascript/:/text\/css/);assert.ok((await resource.text()).length>0);}
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });
 

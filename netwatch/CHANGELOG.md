@@ -1,3 +1,9 @@
+# 1.0.8
+
+- Sửa trang trắng sau đăng nhập trên Windows: phục vụ JavaScript/CSS đúng với dấu phân cách đường dẫn của hệ điều hành.
+- Kiểm tra gói Windows bằng đăng nhập thật và tải các tài nguyên giao diện sau đăng nhập.
+- Bổ sung hướng dẫn cập nhật Windows giữ nguyên dữ liệu.
+
 # 1.0.7
 
 - Thêm tên hiển thị quản trị viên có thể chỉnh sửa riêng cho từng bản cài; không đổi tài khoản đăng nhập hoặc mật khẩu.

@@ -133,7 +133,7 @@ jobs:
           $env:PORT = '18090'
           $node = Join-Path $package 'node.exe'
           $server = Join-Path $package 'dist/server.mjs'
-          $process = Start-Process -FilePath $node -ArgumentList "`"$server`"" -PassThru -NoNewWindow
+          $process = Start-Process -FilePath $node -ArgumentList "`"$server`"" -WorkingDirectory $package -PassThru -NoNewWindow
           try {
             $healthy = $false
             for ($attempt = 0; $attempt -lt 40; $attempt++) {
@@ -142,6 +142,29 @@ jobs:
             }
             if (-not $healthy) { throw 'Windows package did not start or failed its health check.' }
             if ((Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:18090/login').StatusCode -ne 200) { throw 'Windows login page did not load.' }
+            @'
+            import assert from 'node:assert/strict';
+            const origin='http://127.0.0.1:18090';
+            const login=await fetch(origin+'/login',{method:'POST',redirect:'manual',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'admin',password:process.env.NETWATCH_PASSWORD})});
+            assert.equal(login.status,303,'Windows login must redirect successfully');
+            const cookie=login.headers.get('set-cookie')?.split(';')[0];
+            assert.ok(cookie,'Windows login must set a session cookie');
+            const page=await fetch(origin+'/',{headers:{cookie}});
+            assert.equal(page.status,200);
+            const html=await page.text();
+            const assets=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css))"/g)].map(m=>m[1]);
+            assert.ok(assets.some(p=>p.endsWith('.js')),'Dashboard must reference JavaScript');
+            assert.ok(assets.some(p=>p.endsWith('.css')),'Dashboard must reference CSS');
+            for(const asset of assets){
+              const r=await fetch(new URL(asset,origin),{headers:{cookie}});
+              assert.equal(r.status,200,'Windows dashboard asset: '+asset);
+              assert.match(r.headers.get('content-type')||'',asset.endsWith('.js')?/javascript/:/text\/css/);
+              assert.ok((await r.text()).length>0);
+            }
+            assert.equal((await fetch(origin+'/api/session',{headers:{cookie}})).status,200);
+            console.log('Windows login, dashboard, JavaScript, CSS and session passed.');
+            '@ | & $node --input-type=module
+            if ($LASTEXITCODE -ne 0) { throw 'Windows authenticated dashboard smoke test failed.' }
           }
           finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@v6
