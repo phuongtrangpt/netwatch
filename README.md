@@ -33,10 +33,10 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.4)
+## Cài trên Windows, macOS, Linux và Raspberry Pi (1.0.5)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.4.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.4` hoặc `compose.yaml`.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.5.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.5` hoặc `compose.yaml`.
 - Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon, Pi và máy ARM64, `linux/arm/v7` cho Pi/hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
 - **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; Pi aarch64 tự nhận image ARM64.
 
@@ -44,7 +44,7 @@ Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.4`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.5`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 HAOS Pi hiện hành thường dùng aarch64; ARMv7 dành cho hệ ARM32 cũ còn tương thích.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
@@ -62,4 +62,12 @@ CI chạy kiểm tra mã, smoke test gói Windows, và khởi động thử ARM6
 - Đăng nhập qua HTTPS reverse proxy được hỗ trợ thông qua Fetch Metadata của trình duyệt; với proxy đặc biệt có thể cấu hình `NETWATCH_PUBLIC_URL`, hoặc `NETWATCH_ALLOWED_ORIGINS` là danh sách origin được phép, cách nhau dấu phẩy. Chỉ bật `NETWATCH_TRUST_PROXY=true` nếu máy chủ đứng sau proxy đáng tin cậy đã ghi đè các header `X-Forwarded-Host` và `X-Forwarded-Proto`.
 - Nâng cấp giữ dữ liệu cũ trong `/data`. Tài khoản Viewer cũ vẫn hoạt động và ban đầu giữ quyền xem mọi dự án, mọi mục cho tương thích; hãy vào Admin chỉnh lại phạm vi trước khi chia sẻ.
 - Trước khi cập nhật Add-on, tạo bản backup dữ liệu. Không chia sẻ `/data` hoặc token thu thập router.
+
+## Kiểm tra WAN và cảnh báo Telegram (1.0.5)
+
+- Trong **Cấu hình giám sát**, bật **Tự chọn interface WAN**, chọn đúng interface cho từng line và lưu. Dự án chỉ bật kiểm tra Internet riêng khi có ít nhất hai interface được chọn; PPPoE chọn interface PPPoE client.
+- Collector ping `8.8.8.8` qua từng interface đã chọn, hai gói mỗi chu kỳ. NetWatch chỉ xác nhận line offline sau hai chu kỳ liên tiếp thất bại. Trạng thái Link và Internet được hiển thị riêng.
+- Trong cùng mục, cấu hình Bot Token và Chat ID Telegram theo từng dự án. Nhắn `/start` cho bot, lưu cấu hình rồi dùng **Gửi tin nhắn thử**. Cảnh báo được gửi khi WAN mất/phục hồi hoặc router ngừng gửi dữ liệu hơn 3 phút rồi kết nối lại.
+- Bot Token được mã hóa bằng khóa riêng nằm trong `/data/auth.json`; không hiển thị lại trong giao diện và không cấp cho Viewer. Sao lưu `/data` để giữ khóa giải mã khi di chuyển máy.
+- Router đã cài collector cũ cần một lần tải **nâng cấp v5 giữ nguyên khóa** trong mục Kết nối router, upload `.rsc` vào WinBox Files rồi chạy `/import file-name=netwatch-upgrade-v5.rsc`. Router mới dùng bộ cài v5. Không sửa routing table hoặc cấu hình WAN.
 

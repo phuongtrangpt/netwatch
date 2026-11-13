@@ -1,4 +1,4 @@
-import {randomBytes,scryptSync,timingSafeEqual,createHmac} from 'node:crypto';
+import {randomBytes,scryptSync,timingSafeEqual,createHmac,createCipheriv,createDecipheriv} from 'node:crypto';
 import {existsSync,readFileSync,writeFileSync,renameSync} from 'node:fs';
 import {join} from 'node:path';
 export type Role='owner'|'viewer';
@@ -48,6 +48,8 @@ export function checkLogin(username:string,password:string):string|null{
  return null;
 }
 const signature=(payload:string)=>createHmac('sha256',credentials.key).update(payload).digest('hex');
+export function encryptSecret(value:string){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(credentials.key,'hex'),iv);const encrypted=Buffer.concat([cipher.update(value,'utf8'),cipher.final()]);return `v1.${iv.toString('hex')}.${cipher.getAuthTag().toString('hex')}.${encrypted.toString('hex')}`;}
+export function decryptSecret(value:string){const [version,iv,tag,data]=value.split('.');if(version!=='v1'||!iv||!tag||!data)throw Error('Invalid encrypted secret');const decipher=createDecipheriv('aes-256-gcm',Buffer.from(credentials.key,'hex'),Buffer.from(iv,'hex'));decipher.setAuthTag(Buffer.from(tag,'hex'));return Buffer.concat([decipher.update(Buffer.from(data,'hex')),decipher.final()]).toString('utf8');}
 export function session(identity:string='owner'){const v=viewers.find(v=>'viewer:'+v.username===identity);const subject=identity==='owner'?'owner':v?'viewer:'+v.username+':'+v.revision:'invalid';const payload=`${subject}.${Date.now()+86400000}.${randomBytes(16).toString('hex')}`;return `${payload}.${signature(payload)}`;}
 export function authenticated(cookie:string):string|null{
  const token=/(?:^|;\s*)netwatch=([^;]+)/.exec(cookie)?.[1];if(!token)return null;
