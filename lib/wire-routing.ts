@@ -1,3 +1,4 @@
+import {MAX_TOPOLOGY_ITEMS} from './topology-limits';
 import type {MapNode} from './topology.ts';
 export type Point={x:number;y:number};
 export type PositionMap=Record<string,Point>;
@@ -49,7 +50,7 @@ export function projectAnchor(node:MapNode,p:Point):EndpointAnchor{
  choices.sort((a,b)=>a[1]-b[1]);const side=choices[0][0];return {nodeId:node.id,side,offset:Math.max(0,Math.min(1,side==='left'||side==='right'?(y-node.y)/node.height:(x-node.x)/node.width))};
 }
 export function validateAnchors(value:unknown):string|null{
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>100)return 'Điểm neo không hợp lệ';
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>MAX_TOPOLOGY_ITEMS)return 'Điểm neo không hợp lệ';
  for(const [key,pair] of Object.entries(value as AnchorMap)){if(!/^edge-[a-zA-Z0-9:._-]{1,150}$/.test(key)||!pair||typeof pair!=='object'||Array.isArray(pair)||Object.keys(pair).some(k=>!['source','target'].includes(k)))return 'Điểm neo không hợp lệ';for(const a of [pair.source,pair.target])if(a!==undefined&&(!a||typeof a.nodeId!=='string'||a.nodeId.length>150||!a.nodeId||!['left','right','top','bottom'].includes(a.side)||!Number.isFinite(a.offset)||a.offset<0||a.offset>1))return 'Vị trí neo không hợp lệ';}return null;
 }
 function activeAnchor(nodes:MapNode[],wire:Wire,source:boolean,settings:AnchorMap){const a=settings[wire.id]?.[source?'source':'target'];return a&&a.nodeId===(source?wire.source:wire.target)&&nodes.some(n=>n.id===a.nodeId&&n.kind!=='port')?a:undefined;}

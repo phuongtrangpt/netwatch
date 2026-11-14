@@ -27,3 +27,5 @@ for(const mode of ['infrastructure','pppoe']){
   }
  });
 }
+
+test('collector v6 covers 100 configured IPs in both installation modes',()=>{for(const mode of ['infrastructure','pppoe']){const script=source(installer('http://localhost:8080','',token,'main',mode),'nwSource');assert.ok(script.includes('$nwProbeCount < 100'));assert.ok(script.includes('"collector"=6'));assert.ok(!script.includes('$nwProbeCount < 16'));}});

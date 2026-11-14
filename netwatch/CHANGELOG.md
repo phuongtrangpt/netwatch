@@ -1,3 +1,9 @@
+# 1.0.18
+
+- Nâng tối đa 100 IP theo dõi và 32 switch ảo mỗi dự án; tăng giới hạn lưu vị trí, đường dây và điểm neo tương ứng.
+- Collector v6 ping được toàn bộ 100 IP; nâng cấp script router một lần bằng file tải ở mục Sơ đồ, giữ nguyên khóa kết nối.
+- Đồng bộ giới hạn giao diện, API lưu sơ đồ và API nhận kết quả ping; giữ sơ đồ hiện có.
+
 # 1.0.17
 
 - Đổi mật khẩu quản trị ngay trên web; xác nhận mật khẩu hiện tại, thu hồi phiên cũ, giữ khóa router và mã hóa Telegram.

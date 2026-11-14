@@ -113,3 +113,7 @@ Không tắt máy khi đang cập nhật. Sau cập nhật qua web, ứng dụng
 Home Assistant không cho một add-on cập nhật chính nó. NetWatch kiểm tra/báo phiên bản mới, nhưng người dùng cập nhật ở **Cài đặt → Ứng dụng/Tiện ích bổ sung → NetWatch Local → Cập nhật** và nên tạo backup trước. Nếu kho chưa thấy bản mới, làm mới kho ứng dụng trước. Không cần gỡ add-on.
 
 Docker: tải image mới, tạo lại container theo cách đã cài và giữ nguyên volume dữ liệu. NetWatch không yêu cầu Docker socket hoặc quyền quản trị Home Assistant chỉ để tự thay container.
+
+### Giới hạn sơ đồ từ 1.0.18
+
+Mỗi dự án hỗ trợ 100 IP theo dõi và 32 switch ảo. Sau khi cập nhật server, tải bản nâng cấp collector v6 ở mục Sơ đồ và import vào router để kiểm tra đủ 100 IP; script cũ chỉ ping 16 IP. Không tạo lại khóa. Mỗi IP vẫn được ping 2 gói; khi nhiều IP mất kết nối, vòng kiểm tra có thể kéo dài hơn.

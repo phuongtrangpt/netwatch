@@ -1,3 +1,4 @@
+import {MAX_WATCHED_IPS,MAX_VIRTUAL_SWITCHES} from './topology-limits';
 import {list,truth} from './core.ts';
 export type WatchedDevice={id:string;ip:string;name:string;type:string;parentId:string;enabled:boolean;pinned?:boolean;virtual?:boolean;notifyEnabled?:boolean;notifyRepeatMinutes?:0|30|60};
 export const DEVICE_TYPES=['switch','router','ap','camera','nvr','server','pc','printer','other'];
@@ -7,8 +8,8 @@ export function validIP(value:unknown):value is string{
  const n=a.map(Number);return n[0]>0&&n[0]<224&&n[0]!==127&&!(n[0]===169&&n[1]===254)&&value!=='255.255.255.255';
 }
 export function validateDevices(value:unknown):string|null{
- if(!Array.isArray(value)||value.length>48)return 'Tối đa 16 IP theo dõi và 32 switch ảo.';
- if(value.filter(d=>!d?.virtual).length>16||value.filter(d=>d?.virtual).length>32)return 'Tối đa 16 IP theo dõi và 32 switch ảo.';
+ if(!Array.isArray(value)||value.length>MAX_WATCHED_IPS+MAX_VIRTUAL_SWITCHES)return 'Tối đa 100 IP theo dõi và 32 switch ảo.';
+ if(value.filter(d=>!d?.virtual).length>MAX_WATCHED_IPS||value.filter(d=>d?.virtual).length>MAX_VIRTUAL_SWITCHES)return 'Tối đa 100 IP theo dõi và 32 switch ảo.';
  const ids=new Set<string>(),ips=new Set<string>();
  for(const d of value){if(!d||typeof d.id!=='string'||!/^device-[a-zA-Z0-9-]{1,60}$/.test(d.id)||(d.virtual===true?(d.ip!==''||d.type!=='switch'||d.enabled!==false||d.pinned!==true):!validIP(d.ip))||typeof d.name!=='string'||!d.name.trim()||d.name.length>60||!DEVICE_TYPES.includes(d.type)||typeof d.enabled!=='boolean'||typeof d.parentId!=='string'||d.parentId.length>120)return 'Kiểm tra lại IP, tên và loại thiết bị.';if(d.virtual!==undefined&&typeof d.virtual!=='boolean')return 'Loại thiết bị không hợp lệ.';if(d.pinned!==undefined&&typeof d.pinned!=='boolean')return 'Trạng thái ghim không hợp lệ.';if(d.notifyEnabled!==undefined&&typeof d.notifyEnabled!=='boolean')return 'Trạng thái cảnh báo không hợp lệ.';if(d.notifyRepeatMinutes!==undefined&&![0,30,60].includes(d.notifyRepeatMinutes))return 'Chu kỳ nhắc lại không hợp lệ.';if(ids.has(d.id)||(!d.virtual&&ips.has(d.ip)))return 'IP hoặc mã thiết bị bị trùng.';ids.add(d.id);if(!d.virtual)ips.add(d.ip);}
  const parents=new Map(value.map(d=>[d.id,d.parentId]));

@@ -36,6 +36,14 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   const assets=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css))"/g)].map(m=>m[1]);
   assert.ok(assets.some(p=>p.endsWith('.js')));assert.ok(assets.some(p=>p.endsWith('.css')));
   for(const asset of assets){const resource=await fetch(new URL(asset,origin),{headers:{cookie}});assert.equal(resource.status,200,asset);assert.match(resource.headers.get('content-type')||'',asset.endsWith('.js')?/javascript/:/text\/css/);assert.ok((await resource.text()).length>0);}
+  const hundred=Array.from({length:100},(_,i)=>({id:'device-ip-'+i,name:'Thiết bị '+i,ip:'10.20.0.'+(i+1),type:'ap',parentId:'router',enabled:true,pinned:true}));
+  const virtuals=Array.from({length:32},(_,i)=>({id:'device-virtual-'+i,name:'Switch ảo '+i,ip:'',type:'switch',parentId:'router',enabled:false,pinned:true,virtual:true}));
+  const all=[...hundred,...virtuals],positions=Object.fromEntries(all.map((d,i)=>[d.id,{x:300,y:i*200}])),wireWaypoints=Object.fromEntries(all.map((d,i)=>['edge-'+d.id,[{x:200,y:i*200}]]));
+  r=await api('/api/topology',{revision:1,devices:all,positions,wireWaypoints,wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
+  r=await fetch(origin+'/api/ingest',{method:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({schema:1,kind:'probes',results:hundred.map(d=>({id:d.id,ip:d.ip,sent:2,received:2}))})});assert.equal(r.status,200,await r.clone().text());
+  r=await api('/api/dashboard');const large=await r.json();assert.equal(large.topology.devices.length,132);assert.equal(large.probes.results.length,100);
+  r=await api('/api/topology',{revision:2,devices:[...all,{...hundred[0],id:'device-extra',ip:'10.20.0.101'}]});assert.equal(r.status,400);
+  await stop();await start();r=await api('/api/dashboard');assert.equal((await r.json()).topology.devices.length,132);
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });
 

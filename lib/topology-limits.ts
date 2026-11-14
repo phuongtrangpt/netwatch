@@ -1,0 +1,3 @@
+export const MAX_WATCHED_IPS=100;
+export const MAX_VIRTUAL_SWITCHES=32;
+export const MAX_TOPOLOGY_ITEMS=256;
