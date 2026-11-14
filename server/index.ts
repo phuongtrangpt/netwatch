@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {systemInfo,beginUpdate} from './updates';
 import {APP_VERSION} from './version';
 import {createServer} from 'node:http';
 import {getSupport,saveSupport} from './support';
@@ -5,7 +7,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {db,sqlite} from './database';
 import {requestContext} from '../lib/server';
-import {authenticated,checkLogin,session,loginHTML,accountName,viewerInfo,saveViewer,removeViewer,canView,projectAccess,visiblePermissions} from './auth';
+import {authenticated,checkLogin,session,loginHTML,accountName,isAdmin,adminInfo,saveAdmin,removeAdmin,changeOwnPassword,viewerInfo,saveViewer,removeViewer,canView,projectAccess,visiblePermissions} from './auth';
 import * as dashboard from '../app/api/dashboard/route';
 import * as projects from '../app/api/projects/route';
 import * as config from '../app/api/config/route';
@@ -43,7 +45,7 @@ const server=createServer(async(req,res)=>{
   const url=new URL(req.url||'/',process.env.NETWATCH_PUBLIC_URL||'http://'+req.headers.host);
   const method=req.method||'GET',path=url.pathname;
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Cache-Control','no-store');
-  if(path==='/healthz'&&method==='GET'){res.end('ok');return;}
+  if(path==='/healthz'&&method==='GET'){res.setHeader('X-NetWatch-Version',APP_VERSION);res.end('ok');return;}
   const auth=authenticated(req.headers.cookie||'');
   const viewer=!!auth&&auth.startsWith('viewer:');
   const ingestRequest=path==='/api/ingest'&&method==='POST';
@@ -52,7 +54,7 @@ const server=createServer(async(req,res)=>{
    else{res.writeHead(302,{Location:'/login'});res.end();}return;
   }
   // Viewer access is an explicit read allowlist; router ingest has separate bearer authentication.
-  if(viewer&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session','/api/support'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
+  if(viewer&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session','/api/support','/api/system'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
   let body:Buffer|undefined;
   if(!['GET','HEAD'].includes(method)){
    const chunks:Buffer[]=[];let size=0;
@@ -77,18 +79,40 @@ const server=createServer(async(req,res)=>{
   }
   if(path==='/logout'){res.writeHead(303,{Location:'/login','Set-Cookie':'netwatch=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});res.end();return;}
   if(path.startsWith('/api/')){
-   if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:APP_VERSION,role:viewer?'viewer':'owner',username:auth?accountName(auth):null,...(auth==='owner'?{displayName}:{}),permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:APP_VERSION,loginId:createHash('sha256').update(/(?:^|;\s*)netwatch=([^;]+)/.exec(req.headers.cookie||'')?.[1]||'').digest('hex').slice(0,24),role:viewer?'viewer':'owner',username:auth?accountName(auth):null,...(isAdmin(auth)?{displayName}:{}),permissions:visiblePermissions(auth)}));return;}
+   if(path==='/api/system'){
+    res.setHeader('Content-Type','application/json');
+    if(method==='GET'){res.end(JSON.stringify(await systemInfo()));return;}
+    if(method!=='POST'){res.writeHead(405);res.end();return;}
+    if(!isAdmin(auth)){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ quản trị viên được cập nhật.'}));return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    try{const input=JSON.parse(body?.toString()||'{}');if(input.action!=='install')throw Error('Thao tác không hợp lệ.');const result=await beginUpdate(input.version,shutdown);res.writeHead(202);res.end(JSON.stringify(result));}
+    catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Không bắt đầu được cập nhật.'}));}return;
+   }
+   if(path==='/api/admins'||path==='/api/password'){
+    res.setHeader('Content-Type','application/json');
+    if(!isAdmin(auth)){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ tài khoản quản trị được sử dụng chức năng này.'}));return;}
+    if(path==='/api/admins'&&method==='GET'){res.end(JSON.stringify(adminInfo()));return;}
+    if(method!=='POST'){res.writeHead(405);res.end();return;}
+    if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
+    try{
+     const input=JSON.parse(body?.toString()||'{}');
+     if(path==='/api/password'){changeOwnPassword(auth!,input.currentPassword,input.newPassword);res.end(JSON.stringify({ok:true,reauthenticate:true}));return;}
+     if(!['save','delete'].includes(input.action))throw Error('Thao tác không hợp lệ.');
+     const value=input.action==='delete'?removeAdmin(auth!,input.username,input.currentPassword):saveAdmin(auth!,input);res.end(JSON.stringify(value));
+    }catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Không cập nhật được tài khoản.'}));}return;
+   }
    if(path==='/api/support'){
     res.setHeader('Content-Type','application/json');
     if(method==='GET'){const value=getSupport();res.end(JSON.stringify(value));return;}
-    if(auth!=='owner'){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ Admin được thay đổi banner.'}));return;}
+    if(!isAdmin(auth)){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ Admin được thay đổi banner.'}));return;}
     if(method!=='POST'){res.writeHead(405);res.end();return;}
     if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}
     try{res.end(JSON.stringify(saveSupport(JSON.parse((body||Buffer.alloc(0)).toString()))));}
     catch(error){res.writeHead(400);res.end(JSON.stringify({error:error instanceof Error?error.message:'Cấu hình không hợp lệ'}));}return;
    }
    if(path==='/api/viewer'){
-    if(auth!=='owner'){res.writeHead(403);res.end();return;}
+    if(!isAdmin(auth)){res.writeHead(403);res.end();return;}
     res.setHeader('Content-Type','application/json');
     if(method==='GET'){res.end(JSON.stringify(viewerInfo()));return;}
     if(method==='DELETE'){if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}res.end(JSON.stringify(removeViewer(url.searchParams.get('username')||'')));return;}
@@ -142,4 +166,5 @@ server.listen(port,'0.0.0.0',()=>console.log(`NetWatch listening on :${port}; d�
 const checkRouterHeartbeat=()=>{try{const now=Date.now(),routers=sqlite.prepare('SELECT r.id,r.last_seen,p.name FROM router r LEFT JOIN projects p ON p.id=r.id WHERE r.last_seen IS NOT NULL').all() as any[];for(const r of routers){const key=scopedKey(r.id,'router_alert_state'),row=sqlite.prepare('SELECT value FROM settings WHERE key=?').get(key) as any,offline=now-r.last_seen>180000,online=!offline,previous=row?JSON.parse(row.value):null;if(previous&&previous.online===online)continue;sqlite.prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify({online,at:now}));if(row||offline){const label=r.name||'Mạng chính';const message=offline?`Router không gửi dữ liệu trong hơn 3 phút: ${label}`:`Router đã gửi dữ liệu trở lại: ${label}`;sqlite.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').run(crypto.randomUUID(),now,offline?'warning':'info',message,r.id);void sendTelegram(db,r.id,`${offline?'🔴':'🟢'} NetWatch · ${label}\n${message}`);}}}catch(error){console.error('NetWatch heartbeat monitor:',error instanceof Error?error.message:'error');}};
 const heartbeatTimer=setInterval(()=>{checkRouterHeartbeat();void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry:',error instanceof Error?error.message:'error'));},30000);heartbeatTimer.unref();
 const summaryTimer=setInterval(()=>{void sendScheduledTelegramSummary().catch(error=>console.error('NetWatch Telegram summary:',error instanceof Error?error.message:'error'));},30000);summaryTimer.unref();
-for(const signal of ['SIGTERM','SIGINT']as const)process.on(signal,()=>{clearInterval(heartbeatTimer);clearInterval(summaryTimer);server.close(()=>{sqlite.pragma('wal_checkpoint(TRUNCATE)');sqlite.close();process.exit(0);});setTimeout(()=>process.exit(1),10000).unref();});
+function shutdown(){clearInterval(heartbeatTimer);clearInterval(summaryTimer);server.close(()=>{sqlite.pragma('wal_checkpoint(TRUNCATE)');sqlite.close();process.exit(0);});setTimeout(()=>process.exit(1),10000).unref();}
+for(const signal of ['SIGTERM','SIGINT']as const)process.on(signal,shutdown);

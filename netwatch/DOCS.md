@@ -93,3 +93,23 @@ Mốc nhắc lưu trong dữ liệu ứng dụng. Lần đầu ghi nhận WAN c�
 Số phiên bản đang chạy hiển thị trên thanh đầu trang, chân trang và trang đăng nhập, lấy từ gói ứng dụng đã cài. Khi cập nhật xong, nhấn Ctrl+F5 và đối chiếu số này.
 
 Sơ đồ giữ nhánh WAN logic, loại cổng truyền dẫn PPPoE khỏi nhánh LAN (kể cả PPPoE qua VLAN). Không xóa interface, cấu hình WAN hoặc vị trí các thiết bị LAN đã ghim; việc ẩn đường chỉ tác động phần hiển thị sơ đồ.
+
+## Quản trị viên và cập nhật trên web (1.0.16)
+
+Trong **Cấu hình giám sát → Tài khoản quản trị**, đổi mật khẩu bằng mật khẩu hiện tại, mật khẩu mới và nhập lại. Mật khẩu dài 12–256 ký tự. Đổi thành công sẽ yêu cầu đăng nhập lại và thu hồi các phiên cũ của tài khoản đó; dữ liệu, khóa router và token Telegram không đổi.
+
+Có thể tạo tối đa 20 quản trị viên bổ sung. Tài khoản quản trị có đầy đủ quyền trên mọi dự án và cài đặt, bao gồm quản lý tài khoản. Thêm/sửa/xóa quản trị viên yêu cầu xác nhận bằng mật khẩu của người đang đăng nhập. `admin` mặc định luôn được giữ; không tự xóa/tắt tài khoản đang sử dụng. Tài khoản Viewer vẫn giữ cơ chế phân quyền chỉ xem.
+
+**Thông tin trang** hiển thị phiên bản đang cài, phiên bản phát hành mới nhất và môi trường chạy. Sau khi quản trị viên đăng nhập, ứng dụng kiểm tra GitHub; nếu có bản mới sẽ hiện popup. Chọn **Để sau** thì tiếp tục sử dụng, vẫn có thể kiểm tra/cập nhật trong mục này. Không tự cài khi chưa chọn đồng ý. Các tab mở lại trong cùng phiên không nhắc lặp cùng phiên bản.
+
+### Windows portable
+
+Cần cập nhật thủ công một lần lên gói đầy đủ 1.0.16 hoặc mới hơn để có trình cập nhật. Từ đó chọn **Cập nhật ngay** trên web. Gói chỉ được lấy từ bản phát hành chính thức `phuongtrangpt/netwatch`, kiểm tra kích thước và SHA-256. Chương trình chuẩn bị xong gói mới rồi dừng server, sao lưu file ứng dụng và toàn bộ dữ liệu (trừ thư mục cập nhật), thay file, khởi động và kiểm tra phiên bản. Lỗi khởi động sẽ khôi phục ứng dụng và dữ liệu trước cập nhật.
+
+Không tắt máy khi đang cập nhật. Giữ cửa sổ tiến trình mới khi ứng dụng chạy; nhấn Ctrl+C để dừng. Bản sao lưu và log của từng lần cập nhật ở `data/updates/<mã lần cập nhật>/`; không chia sẻ thư mục này vì có dữ liệu riêng. Cổng và biến môi trường của server được kế thừa. Nếu thư mục cài không có quyền ghi, cập nhật sẽ dừng và báo lỗi.
+
+### Home Assistant OS và Docker
+
+Home Assistant không cho một add-on cập nhật chính nó. NetWatch kiểm tra/báo phiên bản mới, nhưng người dùng cập nhật ở **Cài đặt → Ứng dụng/Tiện ích bổ sung → NetWatch Local → Cập nhật** và nên tạo backup trước. Nếu kho chưa thấy bản mới, làm mới kho ứng dụng trước. Không cần gỡ add-on.
+
+Docker: tải image mới, tạo lại container theo cách đã cài và giữ nguyên volume dữ liệu. NetWatch không yêu cầu Docker socket hoặc quyền quản trị Home Assistant chỉ để tự thay container.

@@ -1,3 +1,11 @@
+# 1.0.16
+
+- Đổi mật khẩu quản trị ngay trên web; xác nhận mật khẩu hiện tại, thu hồi phiên cũ, giữ khóa router và mã hóa Telegram.
+- Thêm tài khoản quản trị toàn quyền, bật/tắt, đặt lại mật khẩu và xóa tài khoản bổ sung; giữ admin mặc định và không cho tự xóa/tắt tài khoản đang dùng.
+- Thêm Thông tin trang, kiểm tra phiên bản khi quản trị viên đăng nhập và popup báo bản mới; có thể hoãn và kiểm tra thủ công.
+- Windows portable cập nhật từ web: kiểm tra SHA-256, sao lưu sau khi dừng ứng dụng, thay bản mới, kiểm tra khởi động và phục hồi bản cũ/dữ liệu nếu lỗi.
+- Home Assistant/Docker hiển thị phiên bản và hướng dẫn cập nhật theo môi trường; không tự thay container đang chạy.
+
 # 1.0.15
 
 - Không vẽ nhánh cổng rỗng trên sơ đồ: loại các đoạn ether1/ether2 bị thừa khi PPPoE chưa có ánh xạ cổng vật lý.

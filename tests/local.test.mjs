@@ -68,13 +68,13 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'view',password:'viewer-password-123',permissions:{'*':['overview','topology']}});assert.equal(r.status,200);
   assert.equal((await login('admin','viewer-password-123')).status,401);
   const viewer=await login('view','viewer-password-123');assert.equal(viewer.status,303);
-  r=await api('/api/session',viewer.cookie);assert.deepEqual(await r.json(),{version:JSON.parse(readFileSync('package.json','utf8')).version,role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
+  r=await api('/api/session',viewer.cookie);const viewerSession=await r.json();assert.match(viewerSession.loginId,/^[a-f0-9]{24}$/);delete viewerSession.loginId;assert.deepEqual(viewerSession,{version:JSON.parse(readFileSync('package.json','utf8')).version,role:'viewer',username:'view',permissions:{'*':['overview','topology']}});
   r=await api('/api/projects',admin.cookie,{name:'Nhà trọ',model:'E50UG',mode:'pppoe'});const projects=await r.json();assert.equal(r.status,200);
   r=await api('/api/projects',viewer.cookie);assert.equal((await r.json()).projects.length,2);
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}
   for(const path of ['/api/projects','/api/topology','/api/config','/api/pair','/api/viewer','/api/future-write-route']){r=await api(path,viewer.cookie,{enabled:false}, {'oai-authenticated-user-id':'owner','x-role':'owner'});assert.equal(r.status,403,path);}
   for(const path of ['/api/upgrade','/api/viewer'])assert.equal((await api(path,viewer.cookie)).status,403,path);
-  const forged=viewer.cookie.replace('viewer:view:','owner:');assert.equal((await api('/api/dashboard',forged)).status,401);
+  const forged=viewer.cookie.replace('netwatch=','netwatch=x');assert.equal((await api('/api/dashboard',forged)).status,401);
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
   r=await api('/api/dashboard?module=topology',viewer.cookie);assert.equal((await r.json()).topology.devices.length,1);
@@ -158,4 +158,48 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   assert.ok(messages().every(m=>m.text.includes('NetWatch · Dự án: Trường Tam Thanh')),'Every WAN loss/recovery/reminder and retried group delivery includes the project name');
 
  }finally{if(child&&child.exitCode===null)await stop();db?.close();rmSync(data,{recursive:true,force:true});}
+});
+
+test('additional administrators, password revocation, legacy sessions and update authorization',async()=>{
+ const {writeFileSync}=await import('node:fs');const {createHmac}=await import('node:crypto');
+ const data=mkdtempSync(join(tmpdir(),'netwatch-admins-')),mock=join(data,'release-mock.mjs');
+ writeFileSync(mock,`const original=globalThis.fetch;globalThis.fetch=async(url,options)=>String(url)==='https://api.github.com/repos/phuongtrangpt/netwatch/releases/latest'?new Response(JSON.stringify({tag_name:'v9.0.0',draft:false,prerelease:false,body:'New release',assets:[]}),{status:200}):original(url,options);`);
+ const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=probe.address().port;await new Promise(r=>probe.close(r));const origin=`http://127.0.0.1:${port}`;let child,output='';
+ const rootPassword='test-password-12345',adminPassword='tech-password-12345',adminNew='tech-password-new-12345',rootNew='root-password-new-12345';
+ async function start(){child=spawn(process.execPath,['--import',mock,'dist/server.mjs'],{env:{...process.env,DATA_DIR:data,PORT:String(port),NETWATCH_PASSWORD:rootPassword},stdio:['ignore','pipe','pipe']});child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x);for(let i=0;i<100;i++){try{if((await fetch(origin+'/healthz')).ok)return;}catch{}await new Promise(r=>setTimeout(r,40));}throw Error(output);}
+ async function stop(){child.kill('SIGTERM');await once(child,'exit');}
+ async function login(username,password){const r=await fetch(origin+'/login',{method:'POST',redirect:'manual',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password})});return {status:r.status,cookie:r.headers.get('set-cookie')?.split(';')[0]||''};}
+ const api=(path,cookie,body,extra={})=>fetch(origin+path,{method:body?'POST':'GET',headers:{origin,cookie,'Content-Type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});
+ try{
+  await start();const root=await login('admin',rootPassword);assert.equal(root.status,303);
+  const before=JSON.parse(readFileSync(join(data,'auth.json'),'utf8')),legacyPayload=`owner.${Date.now()+86400000}.${'a'.repeat(32)}`,legacy='netwatch='+legacyPayload+'.'+createHmac('sha256',before.key).update(legacyPayload).digest('hex');
+  assert.equal((await api('/api/session',legacy)).status,200,'Existing default-admin sessions remain valid until password change');
+  assert.equal((await api('/api/admins','')).status,401);
+  let r=await api('/api/admins',root.cookie,{action:'save',username:'tech.one',enabled:true,password:adminPassword,currentPassword:'wrong'});assert.equal(r.status,400);
+  r=await api('/api/admins',root.cookie,{action:'save',username:'tech.one',enabled:true,password:adminPassword,currentPassword:rootPassword},{origin:'http://wrong.test'});assert.equal(r.status,403);
+  r=await api('/api/admins',root.cookie,{action:'save',username:'tech.one',enabled:true,password:adminPassword,currentPassword:rootPassword});assert.equal(r.status,200);const listed=await r.json();assert.deepEqual(listed.map(a=>a.username),['admin','tech.one']);assert.ok(!JSON.stringify(listed).includes('hash'));
+  const tech=await login('tech.one',adminPassword);assert.equal(tech.status,303);r=await api('/api/session',tech.cookie);const session=await r.json();assert.equal(session.role,'owner');assert.equal(session.username,'tech.one');assert.equal(session.permissions,null);assert.match(session.loginId,/^[a-f0-9]{24}$/);
+  assert.equal((await api('/api/config',tech.cookie,{manual:true,wans:['ether1'],aliases:{ether1:'FPT'}})).status,200);
+  assert.equal((await api('/api/viewer',tech.cookie,{enabled:true,username:'view.one',password:'viewer-password-12345',permissions:{'*':['overview']}})).status,200);
+  assert.equal((await api('/api/viewer',tech.cookie,{enabled:true,username:'tech.one',password:'viewer-password-12345',permissions:{'*':['overview']}})).status,400);
+  const viewer=await login('view.one','viewer-password-12345');assert.equal(viewer.status,303);
+  for(const path of ['/api/admins','/api/password','/api/system'])assert.equal((await api(path,viewer.cookie,{action:'install',version:'9.0.0',currentPassword:adminPassword,newPassword:adminNew})).status,403,path);
+  const info=await (await api('/api/system',tech.cookie)).json();assert.equal(info.available,true);assert.equal(info.latestVersion,'9.0.0');assert.equal(info.canInstall,false);assert.ok(!JSON.stringify(info).includes('token'));
+  assert.equal((await api('/api/system',tech.cookie,{action:'install',version:'9.0.0'},{origin:'http://wrong.test'})).status,403);
+  assert.equal((await api('/api/system',tech.cookie,{action:'install',version:'9.0.0'})).status,400,'Docker must not overwrite its runtime files');
+  assert.equal((await api('/api/admins',tech.cookie,{action:'delete',username:'tech.one',currentPassword:adminPassword})).status,400);
+  assert.equal((await api('/api/admins',tech.cookie,{action:'delete',username:'admin',currentPassword:adminPassword})).status,400);
+  assert.equal((await api('/api/password',tech.cookie,{currentPassword:'wrong',newPassword:adminNew})).status,400);
+  assert.equal((await api('/api/password',tech.cookie,{currentPassword:adminPassword,newPassword:adminNew})).status,200);
+  assert.equal((await api('/api/session',tech.cookie)).status,401);assert.equal((await login('tech.one',adminPassword)).status,401);
+  const tech2=await login('tech.one',adminNew);assert.equal(tech2.status,303);
+  assert.equal((await api('/api/telegram',root.cookie,{scope:'global',action:'save',ownerChatId:'12345',botToken:'12345:'+ 'a'.repeat(25),summaryEnabled:false,summaryTime:'08:00'})).status,200);
+  assert.equal((await api('/api/password',root.cookie,{currentPassword:rootPassword,newPassword:rootNew})).status,200);
+  assert.equal((await api('/api/session',root.cookie)).status,401);assert.equal((await api('/api/session',legacy)).status,401);assert.equal((await api('/api/session',tech2.cookie)).status,200);
+  const after=JSON.parse(readFileSync(join(data,'auth.json'),'utf8'));assert.equal(after.key,before.key,'Changing password preserves secret encryption key');assert.notEqual(after.hash,before.hash);
+  const root2=await login('admin',rootNew);assert.equal(root2.status,303);assert.equal((await (await api('/api/telegram?scope=global',root2.cookie)).json()).tokenConfigured,true);
+  assert.equal((await api('/api/admins',root2.cookie,{action:'save',username:'tech.one',enabled:false,password:'',currentPassword:rootNew})).status,200);assert.equal((await api('/api/session',tech2.cookie)).status,401);
+  await stop();await start();assert.equal((await login('admin',rootNew)).status,303);assert.equal((await login('tech.one',adminNew)).status,401);
+  assert.ok(!readFileSync(join(data,'admins.json'),'utf8').includes(adminPassword));assert.ok(!readFileSync(join(data,'auth.json'),'utf8').includes(rootNew));
+ }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });

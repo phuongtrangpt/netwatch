@@ -26,6 +26,7 @@ export function saveViewer(input:any){
  if(!input||typeof input.enabled!=='boolean'||typeof input.username!=='string'||typeof input.password!=='string')throw Error('Dữ liệu tài khoản không hợp lệ.');
  const username=input.username.trim();
  if(!/^[a-zA-Z0-9._-]{1,32}$/.test(username)||['admin','owner'].includes(username.toLowerCase()))throw Error('Tên tài khoản không hợp lệ.');
+ if(admins.some(a=>a.username===username))throw Error('Tên đã dùng cho tài khoản quản trị.');
  const old=viewers.find(v=>v.username===username);
  if(viewers.length>=50&&!old)throw Error('Tối đa 50 tài khoản.');
  if(input.password&&(input.password.length<12||input.password.length>256||checkPassword(input.password)))throw Error('Mật khẩu phải từ 12 đến 256 ký tự và khác mật khẩu Admin.');
@@ -42,8 +43,41 @@ export function saveViewer(input:any){
  viewers=[...viewers.filter(v=>v.username!==username),next];persist();return viewerInfo();
 }
 export function removeViewer(username:string){viewers=viewers.filter(v=>v.username!==username);persist();return viewerInfo();}
+type Admin={username:string;enabled:boolean;salt:string;hash:string;revision:string};
+const adminsPath=join(directory,'admins.json');
+let admins:Admin[]=existsSync(adminsPath)?JSON.parse(readFileSync(adminsPath,'utf8')):[];
+function atomicJSON(file:string,value:any){writeFileSync(file+'.tmp',JSON.stringify(value),{mode:0o600});renameSync(file+'.tmp',file);}
+export const isAdmin=(identity:string|null)=>identity==='owner'||!!identity?.startsWith('admin:');
+export function adminInfo(){return [{username:'admin',enabled:true,primary:true},...admins.map(({username,enabled})=>({username,enabled,primary:false}))];}
+export function verifyIdentityPassword(identity:string,password:string){if(typeof password!=='string'||password.length>256)return false;if(identity==='owner')return checkPassword(password);const a=admins.find(a=>a.enabled&&identity==='admin:'+a.username);return !!a&&timingSafeEqual(scryptSync(password,a.salt,32),Buffer.from(a.hash,'hex'));}
+function validNewPassword(password:unknown):asserts password is string{if(typeof password!=='string'||password.length<12||password.length>256)throw Error('Mật khẩu mới phải từ 12 đến 256 ký tự.');}
+export function changeOwnPassword(identity:string,currentPassword:string,newPassword:string){
+ if(!isAdmin(identity)||!verifyIdentityPassword(identity,currentPassword))throw Error('Mật khẩu hiện tại không đúng.');validNewPassword(newPassword);
+ if(currentPassword===newPassword)throw Error('Mật khẩu mới phải khác mật khẩu hiện tại.');
+ const salt=randomBytes(16).toString('hex'),hash=scryptSync(newPassword,salt,32).toString('hex'),revision=randomBytes(16).toString('hex');
+ if(identity==='owner'){const next={...credentials,salt,hash,revision};atomicJSON(path,next);Object.assign(credentials,next);}
+ else{const next=admins.map(a=>identity==='admin:'+a.username?{...a,salt,hash,revision}:a);atomicJSON(adminsPath,next);admins=next;}
+}
+export function saveAdmin(actor:string,input:any){
+ if(!isAdmin(actor)||!verifyIdentityPassword(actor,input?.currentPassword))throw Error('Xác nhận bằng mật khẩu hiện tại của bạn.');
+ const username=typeof input.username==='string'?input.username.trim():'';
+ if(!/^[a-zA-Z0-9._-]{1,32}$/.test(username)||['admin','owner'].includes(username.toLowerCase())||viewers.some(v=>v.username===username))throw Error('Tên tài khoản không hợp lệ hoặc đã được sử dụng.');
+ if(typeof input.enabled!=='boolean'||typeof input.password!=='string')throw Error('Dữ liệu tài khoản không hợp lệ.');
+ if(actor==='admin:'+username)throw Error('Đổi mật khẩu của bạn ở mục riêng; không thể tự tắt tài khoản.');
+ const old=admins.find(a=>a.username===username);if(!old&&admins.length>=20)throw Error('Tối đa 20 tài khoản quản trị bổ sung.');
+ if(!old||input.password)validNewPassword(input.password);
+ const salt=input.password?randomBytes(16).toString('hex'):old!.salt;
+ const value:Admin={username,enabled:input.enabled,salt,hash:input.password?scryptSync(input.password,salt,32).toString('hex'):old!.hash,revision:randomBytes(16).toString('hex')};
+ const next=[...admins.filter(a=>a.username!==username),value];atomicJSON(adminsPath,next);admins=next;return adminInfo();
+}
+export function removeAdmin(actor:string,username:string,currentPassword:string){
+ if(!isAdmin(actor)||!verifyIdentityPassword(actor,currentPassword))throw Error('Xác nhận bằng mật khẩu hiện tại của bạn.');
+ if(username==='admin'||actor==='admin:'+username)throw Error('Không thể xóa admin mặc định hoặc tài khoản đang sử dụng.');
+ const next=admins.filter(a=>a.username!==username);atomicJSON(adminsPath,next);admins=next;return adminInfo();
+}
 export function checkLogin(username:string,password:string):string|null{
  if((username==='admin'||username==='')&&checkPassword(password))return 'owner';
+ const a=admins.find(a=>a.enabled&&a.username===username);if(a&&timingSafeEqual(scryptSync(password,a.salt,32),Buffer.from(a.hash,'hex')))return 'admin:'+a.username;
  const v=viewers.find(v=>v.enabled&&v.username===username);
  if(v?.hash&&v.salt&&timingSafeEqual(scryptSync(password,v.salt,32),Buffer.from(v.hash,'hex')))return 'viewer:'+v.username;
  return null;
@@ -51,18 +85,33 @@ export function checkLogin(username:string,password:string):string|null{
 const signature=(payload:string)=>createHmac('sha256',credentials.key).update(payload).digest('hex');
 export function encryptSecret(value:string){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(credentials.key,'hex'),iv);const encrypted=Buffer.concat([cipher.update(value,'utf8'),cipher.final()]);return `v1.${iv.toString('hex')}.${cipher.getAuthTag().toString('hex')}.${encrypted.toString('hex')}`;}
 export function decryptSecret(value:string){const [version,iv,tag,data]=value.split('.');if(version!=='v1'||!iv||!tag||!data)throw Error('Invalid encrypted secret');const decipher=createDecipheriv('aes-256-gcm',Buffer.from(credentials.key,'hex'),Buffer.from(iv,'hex'));decipher.setAuthTag(Buffer.from(tag,'hex'));return Buffer.concat([decipher.update(Buffer.from(data,'hex')),decipher.final()]).toString('utf8');}
-export function session(identity:string='owner'){const v=viewers.find(v=>'viewer:'+v.username===identity);const subject=identity==='owner'?'owner':v?'viewer:'+v.username+':'+v.revision:'invalid';const payload=`${subject}.${Date.now()+86400000}.${randomBytes(16).toString('hex')}`;return `${payload}.${signature(payload)}`;}
-export function authenticated(cookie:string):string|null{
- const token=/(?:^|;\s*)netwatch=([^;]+)/.exec(cookie)?.[1];if(!token)return null;
- const parts=token.split('.');if(parts.length!==4)return null;const sig=parts.pop()!,payload=parts.join('.');
- if(!/^\d+$/.test(parts[1])||+parts[1]<=Date.now()||!/^[a-f0-9]{64}$/.test(sig)||!timingSafeEqual(Buffer.from(sig,'hex'),Buffer.from(signature(payload),'hex')))return null;
- if(parts[0]==='owner')return 'owner';
- const v=viewers.find(v=>v.enabled&&parts[0]==='viewer:'+v.username+':'+v.revision);return v?'viewer:'+v.username:null;
+function subjectFor(identity:string){
+ if(identity==='owner')return 'owner:'+(credentials.revision||'legacy');
+ const a=admins.find(a=>a.enabled&&identity==='admin:'+a.username);if(a)return 'admin:'+a.username+':'+a.revision;
+ const v=viewers.find(v=>v.enabled&&identity==='viewer:'+v.username);return v?'viewer:'+v.username+':'+v.revision:'invalid';
 }
-export function accountName(identity:string){return identity==='owner'?'admin':identity.slice(7);}
-export function canView(identity:string|null,project:string,module:Module){if(identity==='owner')return true;if(!identity?.startsWith('viewer:'))return false;const v=viewers.find(v=>v.username===identity.slice(7)&&v.enabled);return !!v&&(v.permissions[project]||v.permissions['*']||[]).includes(module);}
-export function projectAccess(identity:string|null,project:string){if(identity==='owner')return true;if(!identity?.startsWith('viewer:'))return false;const v=viewers.find(v=>v.username===identity.slice(7)&&v.enabled);return !!v&&((v.permissions[project]||v.permissions['*']||[]).length>0);}
-export function visiblePermissions(identity:string|null){if(identity==='owner')return null;const v=viewers.find(v=>identity==='viewer:'+v.username&&v.enabled);return v?.permissions||{};}
+export function session(identity:string='owner'){
+ const payload=Buffer.from(JSON.stringify({subject:subjectFor(identity),expires:Date.now()+86400000,nonce:randomBytes(16).toString('hex')})).toString('base64url');return payload+'.'+signature(payload);
+}
+export function authenticated(cookie:string):string|null{
+ try{
+ const token=/(?:^|;\s*)netwatch=([^;]+)/.exec(cookie)?.[1];if(!token||token.length>2048)return null;
+ const parts=token.split('.'),sig=parts.pop()!,payload=parts.join('.');
+ if(!/^[a-f0-9]{64}$/.test(sig)||!timingSafeEqual(Buffer.from(sig,'hex'),Buffer.from(signature(payload),'hex')))return null;
+ let subject:string,expires:number;
+ if(parts.length===1){const parsed=JSON.parse(Buffer.from(payload,'base64url').toString());subject=parsed.subject;expires=parsed.expires;}
+ else if(parts.length===3){subject=parts[0];expires=Number(parts[1]);if(subject==='owner'&&!credentials.revision)subject=subjectFor('owner');}
+ else return null;
+ if(!Number.isFinite(expires)||expires<=Date.now())return null;
+ if(subject===subjectFor('owner'))return 'owner';
+ const admin=admins.find(a=>a.enabled&&subject==='admin:'+a.username+':'+a.revision);if(admin)return 'admin:'+admin.username;
+ const viewer=viewers.find(v=>v.enabled&&subject==='viewer:'+v.username+':'+v.revision);return viewer?'viewer:'+viewer.username:null;
+ }catch{return null;}
+}
+export function accountName(identity:string){return identity==='owner'?'admin':identity.startsWith('admin:')?identity.slice(6):identity.slice(7);}
+export function canView(identity:string|null,project:string,module:Module){if(isAdmin(identity))return true;if(!identity?.startsWith('viewer:'))return false;const v=viewers.find(v=>v.username===identity.slice(7)&&v.enabled);return !!v&&(v.permissions[project]||v.permissions['*']||[]).includes(module);}
+export function projectAccess(identity:string|null,project:string){if(isAdmin(identity))return true;if(!identity?.startsWith('viewer:'))return false;const v=viewers.find(v=>v.username===identity.slice(7)&&v.enabled);return !!v&&((v.permissions[project]||v.permissions['*']||[]).length>0);}
+export function visiblePermissions(identity:string|null){if(isAdmin(identity))return null;const v=viewers.find(v=>identity==='viewer:'+v.username&&v.enabled);return v?.permissions||{};}
 export const loginHTML=`<!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08172f"><title>NetWatch | Đăng nhập giám sát mạng</title>

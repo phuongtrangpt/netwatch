@@ -120,6 +120,7 @@ jobs:
           Copy-Item 'packaging/windows/start-netwatch.ps1' $package
           Copy-Item 'packaging/windows/Start-NetWatch.bat' $package
           Copy-Item 'packaging/windows/README.txt' $package
+          Copy-Item 'packaging/windows/update-netwatch.ps1' $package
           $artifact = Join-Path $env:RUNNER_TEMP "netwatch-windows-x64-${{ needs.check.outputs.version }}.zip"
           Compress-Archive -Path (Join-Path $package '*') -DestinationPath $artifact -CompressionLevel Optimal
           New-Item -ItemType Directory -Force -Path 'artifacts' | Out-Null
@@ -167,6 +168,12 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Windows authenticated dashboard smoke test failed.' }
           }
           finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+      - name: Test Windows updater and rollback
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'netwatch-windows-x64'
+          $archive = (Get-ChildItem 'artifacts/netwatch-windows-x64-*.zip' | Select-Object -First 1).FullName
+          ./tests/windows-updater.ps1 -Package $package -Archive $archive
       - uses: actions/upload-artifact@v6
         with:
           name: netwatch-windows-x64
@@ -180,6 +187,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
       - uses: actions/download-artifact@v6
         with:
           name: netwatch-windows-x64
@@ -201,5 +209,6 @@ jobs:
 
           Gói Windows x64 có sẵn Node.js: tải file ZIP đính kèm. Docker hỗ trợ linux/amd64, linux/arm64 và linux/arm/v7. Xem README để cài đặt.
           EOF
+            node --input-type=module -e 'import {readFileSync} from "node:fs";process.stdout.write("\n"+readFileSync("netwatch/CHANGELOG.md","utf8").split(/\n# /)[0]+"\n")' >> release-assets/notes.txt
             gh release create "$TAG" "$asset" --repo "$GH_REPO" --target "$SOURCE_SHA" --title "NetWatch ${TAG#v}" --notes-file release-assets/notes.txt
           fi

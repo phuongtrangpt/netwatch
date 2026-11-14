@@ -16,7 +16,9 @@ if(event==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
  const before=process.env.BEFORE_SHA;
  let old;try{if(before&&/^[a-f0-9]{40}$/.test(before)&&!/^0+$/.test(before))old=execFileSync('git',['show',`${before}:netwatch/config.yaml`],{encoding:'utf8',stdio:['ignore','pipe','ignore']});}catch{}
  const previous=/^version:\s*"([^"]+)"/m.exec(old||'')?.[1];
- publish=previous!==version;
+ let published=false;try{execFileSync('git',['rev-parse','--verify','refs/tags/v'+version],{stdio:'ignore'});published=true;}catch{}
+ // A failed first release has no tag yet; a follow-up fix must rebuild it.
+ publish=previous!==version||!published;
  if(!publish)console.log('::notice::Mã đã được kiểm tra nhưng chưa phát hành: tăng phiên bản để tạo bản cập nhật HAOS.');
 }
 if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,`version=${version}\npublish=${publish}\n`);
