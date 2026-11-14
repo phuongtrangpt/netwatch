@@ -1,4 +1,5 @@
 param([Parameter(Mandatory=$true)][string]$RequestPath,[switch]$ValidateOnly)
+[IO.File]::WriteAllText((Join-Path (Split-Path -Parent $RequestPath) 'helper.started'),'started')
 $ErrorActionPreference='Stop'
 # PowerShell 7 hosts can pass a PSModulePath that hides Windows PowerShell modules.
 $env:PSModulePath=(Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules')+';'+(Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')

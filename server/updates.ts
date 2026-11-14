@@ -47,12 +47,15 @@ export async function beginUpdate(version:string,shutdown:()=>void){
   writeFileSync(request,JSON.stringify({appRoot:root,dataDir:data,zipPath:zip,sha256:latest.asset.sha256,targetVersion:version,parentPid:process.pid,port:Number(process.env.PORT||8080)}),{mode:0o600});
   status('preparing','Đang kiểm tra gói cài và chuẩn bị sao lưu…',version);
   const log=openSync(join(job,'helper.log'),'a');
-  let child:ReturnType<typeof spawn>;try{child=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',helper,'-RequestPath',request],{cwd:root,detached:true,stdio:['ignore',log,log],windowsHide:false});}finally{closeSync(log);}
-  let helperExited=false;child.once('exit',()=>{helperExited=true;});
+  const quote=(value:string)=>"'"+value.replace(/'/g,"''")+"'";
+  const command=Buffer.from(`& ${quote(helper)} -RequestPath ${quote(request)}`,'utf16le').toString('base64');
+  const powershell=join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
+  let child:ReturnType<typeof spawn>;try{child=spawn(powershell,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',command],{cwd:root,detached:true,stdio:['ignore',log,log],windowsHide:false});}finally{closeSync(log);}
+  let helperExited=false,helperCode:number|null=null;child.once('exit',(code)=>{helperExited=true;helperCode=code;});
   await new Promise<void>((ok,fail)=>{child.once('spawn',()=>ok());child.once('error',fail);});child.unref();
   // Helper validates the archive before requesting shutdown with a ready marker.
   let ready=false;for(let i=0;i<1200;i++){if(existsSync(join(job,'ready'))){ready=true;break;}if(helperExited||updateStatus().phase==='failed')break;await new Promise(r=>setTimeout(r,500));}
-  if(!ready)throw Error('Chưa thể chuẩn bị cập nhật; ứng dụng tiếp tục chạy.');
+  if(!ready)throw Error('Chưa thể chuẩn bị cập nhật; ứng dụng tiếp tục chạy.'+(helperExited?' Helper exit: '+helperCode:''));
   status('applying','Đang dừng ứng dụng để sao lưu và thay bản mới…',version);shutdown();
  })().catch(error=>{busy=false;status('failed',error instanceof Error?error.message:'Cập nhật thất bại; bản hiện tại vẫn hoạt động.',version);});
  return {ok:true,status:updateStatus()};
