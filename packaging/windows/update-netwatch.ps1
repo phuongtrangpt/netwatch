@@ -79,6 +79,7 @@ try {
     Write-Host 'Giu cua so nay khi su dung. Nhan Ctrl+C de dung.'
     $newProcess.WaitForExit()
 } catch {
+    [IO.File]::WriteAllText((Join-Path $job 'updater.error.log'),($_ | Out-String),(New-Object Text.UTF8Encoding $false))
     if($newProcess -and -not $newProcess.HasExited){Stop-Process -Id $newProcess.Id -Force -ErrorAction SilentlyContinue}
     try {
         if($changed){

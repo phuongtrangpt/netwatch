@@ -32,7 +32,7 @@ function New-Request($zip,$pidValue,$hashOverride=''){
  $manifest=Join-Path $job 'request.json';Write-JSON $manifest @{appRoot=$fixture;dataDir=$data;zipPath=$zip;sha256=$hash;targetVersion=$target;parentPid=$pidValue;port=18091};return $manifest
 }
 function Wait-Ready($request){$ready=Join-Path (Split-Path -Parent $request) 'ready';for($i=0;$i -lt 300;$i++){if(Test-Path -LiteralPath $ready){return};Start-Sleep -Milliseconds 500};throw 'Updater did not validate its package'}
-function Wait-Status($phase){for($i=0;$i -lt 180;$i++){try{$s=Get-Content -LiteralPath (Join-Path $updates 'status.json') -Raw -Encoding UTF8 | ConvertFrom-Json;if($s.phase -eq $phase){return}}catch{};Start-Sleep -Milliseconds 500};throw "Updater did not reach $phase"}
+function Wait-Status($phase){for($i=0;$i -lt 180;$i++){try{$s=Get-Content -LiteralPath (Join-Path $updates 'status.json') -Raw -Encoding UTF8 | ConvertFrom-Json;if($s.phase -eq $phase){return}}catch{};Start-Sleep -Milliseconds 500};throw "Updater did not reach $phase. Last status: $($s | ConvertTo-Json -Compress)"}
 try{
  Set-OldVersion;$old=Start-Old;Wait-Health '0.0.1'
  Set-Content -LiteralPath (Join-Path $data 'sentinel.txt') -Value 'preserve-me'
@@ -73,4 +73,8 @@ try{
  if((Get-FileHash -LiteralPath (Join-Path $data 'auth.json')).Hash -ne $authHash){throw 'Rollback did not restore authentication'}
  if((Get-Content -LiteralPath (Join-Path $data 'sentinel.txt') -Raw).Trim() -ne 'preserve-me'){throw 'Rollback did not restore data'}
  Write-Host 'Windows updater: SHA, archive paths, successful web update, login, pre-apply recovery and rollback passed.'
+}catch{
+ Get-ChildItem -LiteralPath $updates -Filter '*.log' -Recurse | ForEach-Object {Write-Host $_.FullName;Get-Content -LiteralPath $_.FullName -Tail 30}
+ Get-ChildItem -LiteralPath $updates -Filter 'request.json' -Recurse | ForEach-Object {Write-Host (Get-Content -LiteralPath $_.FullName -Raw)}
+ throw
 }finally{Stop-Fixture}
