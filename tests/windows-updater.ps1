@@ -16,7 +16,7 @@ $mockCode=@"
 import {readFileSync} from 'node:fs';
 const archive=$($Archive | ConvertTo-Json -Compress), release=$($release | ConvertTo-Json -Depth 8 -Compress), assetUrl=$($assetUrl | ConvertTo-Json -Compress);
 const original=globalThis.fetch;
-globalThis.fetch=async(url,options)=>{if(String(url)==='https://api.github.com/repos/phuongtrangpt/netwatch/releases/latest')return new Response(JSON.stringify(release),{status:200});if(String(url)===assetUrl)return new Response(readFileSync(archive),{status:200});return original(url,options);};
+globalThis.fetch=async(url,options)=>{if(String(url)==='https://github.com/phuongtrangpt/netwatch/releases/latest/download/netwatch-update.json')return new Response(JSON.stringify(release),{status:200});if(String(url)==='https://api.github.com/repos/phuongtrangpt/netwatch/releases/latest')return new Response('{}',{status:403});if(String(url)===assetUrl)return new Response(readFileSync(archive),{status:200});return original(url,options);};
 "@
 [IO.File]::WriteAllText($mockPath,$mockCode,(New-Object Text.UTF8Encoding $false))
 

@@ -220,8 +220,9 @@ jobs:
         run: |
           asset=$(find release-assets -maxdepth 1 -type f -name 'netwatch-windows-x64-*.zip' -print -quit)
           test -n "$asset"
+          node scripts/update-manifest.mjs "$asset" release-assets/netwatch-update.json
           if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$asset" --repo "$GH_REPO" --clobber
+            gh release upload "$TAG" "$asset" release-assets/netwatch-update.json --repo "$GH_REPO" --clobber
           else
             cat > release-assets/notes.txt <<EOF
           Image Docker: ghcr.io/phuongtrangpt/netwatch:${TAG#v}
@@ -229,5 +230,5 @@ jobs:
           Gói Windows x64 có sẵn Node.js: tải file ZIP đính kèm. Docker hỗ trợ linux/amd64, linux/arm64 và linux/arm/v7. Xem README để cài đặt.
           EOF
             node --input-type=module -e 'import {readFileSync} from "node:fs";process.stdout.write("\n"+readFileSync("netwatch/CHANGELOG.md","utf8").split(/\n# /)[0]+"\n")' >> release-assets/notes.txt
-            gh release create "$TAG" "$asset" --repo "$GH_REPO" --target "$SOURCE_SHA" --title "NetWatch ${TAG#v}" --notes-file release-assets/notes.txt
+            gh release create "$TAG" "$asset" release-assets/netwatch-update.json --repo "$GH_REPO" --target "$SOURCE_SHA" --title "NetWatch ${TAG#v}" --notes-file release-assets/notes.txt
           fi

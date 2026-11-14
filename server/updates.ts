@@ -8,6 +8,7 @@ import {pipeline} from 'node:stream/promises';
 const REPO='phuongtrangpt/netwatch',root=resolve('.'),data=resolve(process.env.DATA_DIR||'/data'),updateDir=join(data,'updates');
 const statusPath=join(updateDir,'status.json');
 let cache:any=null,cacheAt=0,inflight:Promise<any>|null=null,busy=false;
+let lastCheckError:Error|null=null,retryAt=0;
 export function newerVersion(candidate:string,current:string){const valid=/^\d+\.\d+\.\d+$/;if(!valid.test(candidate)||!valid.test(current))return false;const a=candidate.split('.').map(Number),b=current.split('.').map(Number);for(let i=0;i<3;i++){if(a[i]!==b[i])return a[i]>b[i];}return false;}
 export function parseRelease(value:any){
  const version=String(value?.tag_name||'').replace(/^v/,'');
@@ -18,10 +19,18 @@ export function parseRelease(value:any){
  return {version,releaseUrl:`https://github.com/${REPO}/releases/tag/v${version}`,notes:String(value.body||'').slice(0,12000),...(valid?{asset:{url,size:asset.size,sha256:asset.digest.slice(7)}}:{})};
 }
 function platform(){if(process.env.SUPERVISOR_TOKEN)return 'homeassistant';if(process.platform==='win32'&&process.arch==='x64'&&existsSync(join(root,'node.exe'))&&existsSync(join(root,'update-netwatch.ps1')))return 'windows';return 'docker';}
+export async function fetchLatestRelease(fetcher:typeof fetch=fetch){
+ // Release assets use GitHub's download service rather than the rate-limited API.
+ try{const r=await fetcher(`https://github.com/${REPO}/releases/latest/download/netwatch-update.json`,{signal:AbortSignal.timeout(12000)});if(r.ok){const result=parseRelease(await r.json());if(result.asset)return result;}}catch{}
+ const r=await fetcher(`https://api.github.com/repos/${REPO}/releases/latest`,{headers:{Accept:'application/vnd.github+json','User-Agent':'NetWatch-updater'},signal:AbortSignal.timeout(12000)});
+ if(!r.ok)throw Error(r.status===403||r.status===429?'GitHub đang giới hạn kiểm tra phiên bản. Chờ vài phút rồi thử lại, hoặc tải bản Windows từ trang phát hành.':'Không đọc được bản phát hành từ GitHub.');
+ return parseRelease(await r.json());
+}
 async function release(){
- if(cache&&Date.now()-cacheAt<60000)return cache;
+ if(cache&&Date.now()-cacheAt<300000)return cache;
  if(inflight)return inflight;
- inflight=(async()=>{const r=await fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{headers:{Accept:'application/vnd.github+json','User-Agent':'NetWatch-updater'},signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error(r.status===403||r.status===429?'GitHub giới hạn số lần kiểm tra; thử lại sau.':'Không đọc được bản phát hành từ GitHub.');cache=parseRelease(await r.json());cacheAt=Date.now();return cache;})();
+ if(lastCheckError&&Date.now()<retryAt)throw lastCheckError;
+ inflight=(async()=>{try{cache=await fetchLatestRelease();cacheAt=Date.now();lastCheckError=null;return cache;}catch(error){lastCheckError=error instanceof Error?error:Error('Không kiểm tra được phiên bản.');retryAt=Date.now()+60000;throw lastCheckError;}})();
  try{return await inflight;}finally{inflight=null;}
 }
 export function updateStatus(){try{const s=JSON.parse(readFileSync(statusPath,'utf8'));if(['downloading','preparing'].includes(s.phase)&&Date.now()-s.at>660000)return {phase:'failed',message:'Lần cập nhật trước đã bị gián đoạn. Bạn có thể thử lại.',targetVersion:s.targetVersion||null};return {phase:String(s.phase||''),message:String(s.message||'').slice(0,1000),targetVersion:s.targetVersion||null,at:s.at||null};}catch{return {phase:'idle',message:'',targetVersion:null};}}

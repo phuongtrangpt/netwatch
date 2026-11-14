@@ -1,3 +1,8 @@
+# 1.0.20
+
+- Kiểm tra phiên bản ưu tiên manifest đi kèm bản phát hành, giảm phụ thuộc vào giới hạn GitHub API; vẫn xác minh URL, dung lượng và SHA-256 gói Windows.
+- Cache phiên bản 5 phút và lỗi kiểm tra 1 phút để tránh gọi GitHub liên tục khi bị giới hạn.
+
 # 1.0.19
 
 - Sửa Invalid origin khi thêm/sửa dự án hoặc lưu cấu hình qua HTTPS/reverse proxy: dùng kết quả xác thực origin của server, tiếp tục chặn yêu cầu khác nguồn.
