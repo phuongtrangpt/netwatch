@@ -129,7 +129,7 @@ const server=createServer(async(req,res)=>{
    const handler=routes[path.slice(5)]?.[method];if(!handler){res.writeHead(404);res.end();return;}
    const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
    const request=new Request(url,{method,headers,...(body?{body}: {})});
-   const result:Response=await requestContext.run({authenticated:!!auth,role:viewer?'viewer':'owner',originValidated:browserOrigin(req,url)},()=>handler(request));
+   const result:Response=await requestContext.run({authenticated:!!auth,role:viewer?'viewer':'owner',originValidated:browserOrigin(req,url),identity:auth||undefined},()=>handler(request));
    let payload=Buffer.from(await result.arrayBuffer());
    if(viewer&&method==='GET'&&result.ok&&path==='/api/projects'){
     const data=JSON.parse(payload.toString());data.projects=data.projects.filter((p:any)=>projectAccess(auth,p.id));payload=Buffer.from(JSON.stringify(data));

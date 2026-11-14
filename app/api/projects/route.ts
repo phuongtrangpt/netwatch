@@ -1,4 +1,5 @@
-import {database,browserUser,sameOrigin,json} from '../../../lib/server';
+import {verifyIdentityPassword} from '../../../server/auth';
+import {database,browserUser,sameOrigin,json,requestContext} from '../../../lib/server';
 import {projectList,validProjectId,findProject,ROUTER_MODELS} from '../../../lib/projects';
 export async function GET(){if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);try{return json({projects:await projectList(database())});}catch{return json({error:'Không đọc được danh sách dự án'},503);}}
 export async function POST(req:Request){
@@ -17,7 +18,7 @@ export async function DELETE(req:Request){
   const input:any=await req.json();if(typeof input.id!=='string'||!validProjectId(input.id))return json({error:'Mã dự án không hợp lệ'},400);
   if(input.id==='main')return json({error:'Mạng chính là dự án mặc định, không thể xóa. Bạn có thể đổi tên và cấu hình lại.'},400);
   const db=database(),project:any=await findProject(db,input.id);if(!project)return json({error:'Dự án không còn tồn tại'},404);
-  if(input.confirmName!==project.name)return json({error:'Nhập đúng tên dự án để xác nhận xóa'},400);
+  const identity=requestContext.getStore()?.identity;if(!identity||!verifyIdentityPassword(identity,input.currentPassword))return json({error:'Mật khẩu quản trị không đúng'},403);
   const prefix=input.id+':';
   await db.batch([
    db.prepare('DELETE FROM router WHERE id=?').bind(input.id),

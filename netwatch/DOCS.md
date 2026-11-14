@@ -120,4 +120,4 @@ Mỗi dự án hỗ trợ 100 IP theo dõi và 32 switch ảo. Sau khi cập nh�
 
 ### Xóa dự án
 
-Vào Dự án, bấm biểu tượng thùng rác và nhập đúng tên để xóa. Chỉ quản trị viên được xóa. Dữ liệu, khóa kết nối và hàng đợi Telegram của dự án bị xóa; dữ liệu dự án khác được giữ. Mạng chính là dự án mặc định nên không thể xóa, có thể đổi tên/cấu hình lại. Muốn ngừng gửi dữ liệu, gỡ bộ thu thập NetWatch trên router theo hướng dẫn Kết nối router trước khi xóa.
+Vào Dự án, bấm biểu tượng thùng rác, kiểm tra tên dự án hiển thị rồi nhập mật khẩu tài khoản quản trị đang đăng nhập để xác nhận xóa. Chỉ quản trị viên được xóa. Dữ liệu, khóa kết nối và hàng đợi Telegram của dự án bị xóa; dữ liệu dự án khác được giữ. Mạng chính là dự án mặc định nên không thể xóa, có thể đổi tên/cấu hình lại. Muốn ngừng gửi dữ liệu, gỡ bộ thu thập NetWatch trên router theo hướng dẫn Kết nối router trước khi xóa.

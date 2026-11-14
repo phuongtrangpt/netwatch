@@ -1,6 +1,6 @@
-# 1.0.21
+# 1.0.22
 
-- Thêm xóa dự án cho quản trị viên, yêu cầu nhập đúng tên dự án để xác nhận.
+- Thêm xóa dự án cho quản trị viên, hiển thị tên dự án và yêu cầu mật khẩu tài khoản quản trị đang đăng nhập để xác nhận.
 - Xóa dữ liệu theo dự án trong một giao dịch, thu hồi khóa kết nối và dọn hàng đợi Telegram; giữ dữ liệu dự án khác và dự án mặc định Mạng chính.
 
 # 1.0.20
