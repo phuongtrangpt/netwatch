@@ -1,5 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$RequestPath,[switch]$ValidateOnly)
 $ErrorActionPreference='Stop'
+# PowerShell 7 hosts can pass a PSModulePath that hides Windows PowerShell modules.
+$env:PSModulePath=(Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules')+';'+(Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $request=Get-Content -LiteralPath $RequestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $appRoot=[IO.Path]::GetFullPath($request.appRoot)
