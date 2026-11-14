@@ -50,8 +50,10 @@ try {
     if(-not(Test-Path -LiteralPath (Join-Path $stage 'dist/server.mjs'))){throw 'Server bundle missing.'}
     if($ValidateOnly){Write-Output 'Package validated';exit 0}
     Set-Content -LiteralPath (Join-Path $job 'ready') -Value 'ready'
+    [IO.File]::AppendAllText((Join-Path $job 'steps.log'),"Waiting for parent $($request.parentPid)`n")
     $old=Get-Process -Id ([int]$request.parentPid) -ErrorAction SilentlyContinue
-    if($old -and -not $old.WaitForExit(120000)){throw 'Application did not stop. No files were changed.'}
+    if($old -and -not $old.WaitForExit(30000)){throw 'Application did not stop. No files were changed.'}
+    [IO.File]::AppendAllText((Join-Path $job 'steps.log'),"Parent stopped`n")
     $stopped=$true
     Set-UpdateStatus 'applying' 'Dang sao luu du lieu va thay ban moi...'
     New-Item -ItemType Directory -Force -Path (Join-Path $backup 'app'),(Join-Path $backup 'data') | Out-Null
