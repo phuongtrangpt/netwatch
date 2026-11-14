@@ -75,7 +75,7 @@ try{
  Write-Host 'Windows updater: SHA, archive paths, successful web update, login, pre-apply recovery and rollback passed.'
 }catch{
  Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('node.exe','powershell.exe')} | Select-Object ProcessId,ParentProcessId,CommandLine | Format-List | Out-String | Write-Host
- Get-ChildItem -LiteralPath $updates -Recurse | Select-Object FullName,Length | Format-Table -AutoSize | Out-String -Width 300 | Write-Host
+ Get-ChildItem -LiteralPath $updates -Recurse -File | Where-Object {$_.Extension -in @('.log','.json') -and $_.FullName -notmatch '[\\/]stage[\\/]|[\\/]backup[\\/]'} | Select-Object FullName,Length | Format-Table -AutoSize | Out-String -Width 300 | Write-Host
  Get-ChildItem -LiteralPath $updates -Filter '*.log' -Recurse | ForEach-Object {Write-Host $_.FullName;Get-Content -LiteralPath $_.FullName -Tail 30}
  Get-ChildItem -LiteralPath $updates -Filter 'request.json' -Recurse | ForEach-Object {Write-Host (Get-Content -LiteralPath $_.FullName -Raw)}
  throw

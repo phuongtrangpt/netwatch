@@ -46,11 +46,20 @@ export async function beginUpdate(version:string,shutdown:()=>void){
   copyFileSync(join(root,'update-netwatch.ps1'),helper);
   writeFileSync(request,JSON.stringify({appRoot:root,dataDir:data,zipPath:zip,sha256:latest.asset.sha256,targetVersion:version,parentPid:process.pid,port:Number(process.env.PORT||8080)}),{mode:0o600});
   status('preparing','Đang kiểm tra gói cài và chuẩn bị sao lưu…',version);
-  const log=openSync(join(job,'helper.log'),'a');
   const quote=(value:string)=>"'"+value.replace(/'/g,"''")+"'";
   const command=Buffer.from(`& ${quote(helper)} -RequestPath ${quote(request)}`,'utf16le').toString('base64');
   const powershell=join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
-  let child:ReturnType<typeof spawn>;try{child=spawn(powershell,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',command],{cwd:root,detached:false,stdio:['ignore',log,log],windowsHide:true});}finally{closeSync(log);}
+  // A detached PowerShell 5.1 process exits before running. An attached child
+  // is killed by libuv when this server exits. A detached copy of Node owns
+  // the PowerShell child instead, and remains outside the application swap.
+  const runner=join(job,'updater-node.exe'),bootstrap=join(job,'launch.mjs');
+  copyFileSync(process.execPath,runner);
+  writeFileSync(bootstrap,`import {spawn} from 'node:child_process';import {openSync,closeSync} from 'node:fs';
+const fd=openSync(${JSON.stringify(join(job,'helper.log'))},'a');
+const child=spawn(${JSON.stringify(powershell)},${JSON.stringify(['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',command])},{cwd:${JSON.stringify(root)},detached:false,windowsHide:true,stdio:['ignore',fd,fd]});closeSync(fd);
+child.once('error',e=>{console.error(e);process.exit(1);});child.once('exit',code=>process.exit(code??1));`,{mode:0o600});
+  const log=openSync(join(job,'launcher.log'),'a');
+  let child:ReturnType<typeof spawn>;try{child=spawn(runner,[bootstrap],{cwd:job,detached:true,stdio:['ignore',log,log],windowsHide:true});}finally{closeSync(log);}
   let helperExited=false,helperCode:number|null=null;child.once('exit',(code)=>{helperExited=true;helperCode=code;});
   await new Promise<void>((ok,fail)=>{child.once('spawn',()=>ok());child.once('error',fail);});child.unref();
   // Helper validates the archive before requesting shutdown with a ready marker.
