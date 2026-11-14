@@ -231,6 +231,7 @@ test('additional administrators, password revocation, legacy sessions and update
   assert.equal((await api('/api/viewer',tech.cookie,{enabled:true,username:'tech.one',password:'viewer-password-12345',permissions:{'*':['overview']}})).status,400);
   const viewer=await login('view.one','viewer-password-12345');assert.equal(viewer.status,303);
   for(const path of ['/api/admins','/api/password','/api/system'])assert.equal((await api(path,viewer.cookie,{action:'install',version:'9.0.0',currentPassword:adminPassword,newPassword:adminNew})).status,403,path);
+  const quickStatus=await (await api('/api/system?status=1',tech.cookie)).json();assert.ok(quickStatus.currentVersion);assert.equal(quickStatus.status.phase,'idle');assert.equal(quickStatus.latestVersion,undefined);
   const info=await (await api('/api/system',tech.cookie)).json();assert.equal(info.available,true);assert.equal(info.latestVersion,'9.0.0');assert.equal(info.canInstall,false);assert.ok(!JSON.stringify(info).includes('token'));
   assert.equal((await api('/api/system',tech.cookie,{action:'install',version:'9.0.0'},{origin:'http://wrong.test'})).status,403);
   assert.equal((await api('/api/system',tech.cookie,{action:'install',version:'9.0.0'})).status,400,'Docker must not overwrite its runtime files');

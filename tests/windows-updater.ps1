@@ -16,7 +16,7 @@ $mockCode=@"
 import {readFileSync} from 'node:fs';
 const archive=$($Archive | ConvertTo-Json -Compress), release=$($release | ConvertTo-Json -Depth 8 -Compress), assetUrl=$($assetUrl | ConvertTo-Json -Compress);
 const original=globalThis.fetch;
-globalThis.fetch=async(url,options)=>{if(String(url)==='https://github.com/phuongtrangpt/netwatch/releases/latest/download/netwatch-update.json')return new Response(JSON.stringify(release),{status:200});if(String(url)==='https://api.github.com/repos/phuongtrangpt/netwatch/releases/latest')return new Response('{}',{status:403});if(String(url)===assetUrl)return new Response(readFileSync(archive),{status:200});return original(url,options);};
+globalThis.fetch=async(url,options)=>{if(String(url)==='https://github.com/phuongtrangpt/netwatch/releases/latest/download/netwatch-update.json')return new Response(JSON.stringify(release),{status:200});if(String(url)==='https://api.github.com/repos/phuongtrangpt/netwatch/releases/latest')return new Response('{}',{status:403});if(String(url)===assetUrl){const bytes=readFileSync(archive);let offset=0;return new Response(new ReadableStream({async pull(c){await new Promise(r=>setTimeout(r,40));const end=Math.min(offset+1024*1024,bytes.length);c.enqueue(bytes.subarray(offset,end));offset=end;if(offset===bytes.length)c.close();}}),{status:200});}return original(url,options);};
 "@
 [IO.File]::WriteAllText($mockPath,$mockCode,(New-Object Text.UTF8Encoding $false))
 
@@ -50,6 +50,14 @@ try{
  if(-not $updateInfo.available -or -not $updateInfo.canInstall){throw 'Windows web update was not offered'}
  $accepted=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18091/api/system' -Method POST -ContentType 'application/json' -Headers @{Origin='http://127.0.0.1:18091'} -Body (@{action='install';version=$target}|ConvertTo-Json) -WebSession $oldSession
  if($accepted.StatusCode -ne 202){throw 'Windows web update was not accepted'}
+ $progressSeen=$false
+ for($i=0;$i -lt 80;$i++){
+  $snapshot=Invoke-RestMethod -Uri 'http://127.0.0.1:18091/api/system?status=1' -WebSession $oldSession
+  if($snapshot.status.phase -eq 'downloading' -and $snapshot.status.percent -gt 0 -and $snapshot.status.percent -lt 100){if($snapshot.status.downloadedBytes -le 0 -or $snapshot.status.downloadedBytes -ge $snapshot.status.totalBytes){throw 'Invalid download byte counters'};$progressSeen=$true;break}
+  Start-Sleep -Milliseconds 100
+ }
+ if(-not $progressSeen){throw 'Web update did not report intermediate download progress'}
+ Write-Host 'Windows download progress percent and byte counters passed.'
  Wait-Status 'completed';Wait-Health $target
 
  if((Get-FileHash -LiteralPath (Join-Path $data 'auth.json')).Hash -ne $authHash){throw 'Authentication file changed'}

@@ -33,8 +33,8 @@ async function release(){
  inflight=(async()=>{try{cache=await fetchLatestRelease();cacheAt=Date.now();lastCheckError=null;return cache;}catch(error){lastCheckError=error instanceof Error?error:Error('Không kiểm tra được phiên bản.');retryAt=Date.now()+60000;throw lastCheckError;}})();
  try{return await inflight;}finally{inflight=null;}
 }
-export function updateStatus(){try{const s=JSON.parse(readFileSync(statusPath,'utf8'));if(['downloading','preparing'].includes(s.phase)&&Date.now()-s.at>660000)return {phase:'failed',message:'Lần cập nhật trước đã bị gián đoạn. Bạn có thể thử lại.',targetVersion:s.targetVersion||null};return {phase:String(s.phase||''),message:String(s.message||'').slice(0,1000),targetVersion:s.targetVersion||null,at:s.at||null};}catch{return {phase:'idle',message:'',targetVersion:null};}}
-function status(phase:string,message:string,targetVersion:string){mkdirSync(updateDir,{recursive:true,mode:0o700});writeFileSync(statusPath,JSON.stringify({phase,message,targetVersion,at:Date.now()}),{mode:0o600});}
+export function updateStatus(){try{const s=JSON.parse(readFileSync(statusPath,'utf8'));if(['downloading','preparing'].includes(s.phase)&&Date.now()-s.at>660000)return {phase:'failed',message:'Lần cập nhật trước đã bị gián đoạn. Bạn có thể thử lại.',targetVersion:s.targetVersion||null};return {phase:String(s.phase||''),message:String(s.message||'').slice(0,1000),targetVersion:s.targetVersion||null,at:s.at||null,...(Number.isFinite(s.totalBytes)&&s.totalBytes>0&&Number.isFinite(s.downloadedBytes)?{downloadedBytes:Math.min(s.totalBytes,Math.max(0,s.downloadedBytes)),totalBytes:s.totalBytes,percent:Math.min(100,Math.max(0,Math.floor(s.downloadedBytes/s.totalBytes*100)))}:{})};}catch{return {phase:'idle',message:'',targetVersion:null};}}
+function status(phase:string,message:string,targetVersion:string,progress:{downloadedBytes:number;totalBytes:number}|null=null){mkdirSync(updateDir,{recursive:true,mode:0o700});writeFileSync(statusPath,JSON.stringify({phase,message,targetVersion,at:Date.now(),...(progress||{})}),{mode:0o600});}
 export async function systemInfo(){
  const environment=platform();let haPath:string|null=null;
  if(environment==='homeassistant')try{const r=await fetch('http://supervisor/addons/self/info',{headers:{Authorization:'Bearer '+process.env.SUPERVISOR_TOKEN},signal:AbortSignal.timeout(4000)});const v:any=await r.json();if(v.result==='ok'&&/^[a-zA-Z0-9_-]+$/.test(v.data?.slug))haPath='/hassio/addon/'+v.data.slug+'/info';}catch{}
@@ -45,11 +45,11 @@ export async function beginUpdate(version:string,shutdown:()=>void){
  if(platform()!=='windows')throw Error('Bản cài này cần cập nhật qua Home Assistant hoặc Docker.');
  if(busy||['downloading','preparing','applying','restarting'].includes(updateStatus().phase))throw Error('Một lần cập nhật đang chạy.');
  const latest=await release();if(busy||['downloading','preparing','applying','restarting'].includes(updateStatus().phase))throw Error('Một lần cập nhật đang chạy.');if(version!==latest.version||!newerVersion(version,APP_VERSION)||!latest.asset)throw Error('Không có gói cập nhật hợp lệ mới hơn phiên bản đang chạy.');
- busy=true;status('downloading','Đang tải gói cập nhật từ GitHub…',version);
+ busy=true;status('downloading','Đang tải gói cập nhật từ GitHub…',version,{downloadedBytes:0,totalBytes:latest.asset.size});
  void (async()=>{
   const job=join(updateDir,randomUUID());mkdirSync(job,{recursive:true,mode:0o700});const zip=join(job,'package.zip'),helper=join(job,'update-netwatch.ps1'),request=join(job,'request.json');
   const response=await fetch(latest.asset.url,{signal:AbortSignal.timeout(300000)});if(!response.ok||!response.body)throw Error('Không tải được gói cập nhật.');
-  let size=0;const hash=createHash('sha256');const limit=new Transform({transform(chunk,encoding,callback){size+=chunk.length;if(size>latest.asset.size)return callback(Error('Kích thước gói cập nhật không hợp lệ.'));hash.update(chunk);callback(null,chunk);}});
+  let size=0,lastProgressAt=0;const hash=createHash('sha256');const limit=new Transform({transform(chunk,encoding,callback){size+=chunk.length;if(size>latest.asset.size)return callback(Error('Kích thước gói cập nhật không hợp lệ.'));hash.update(chunk);if(Date.now()-lastProgressAt>=500||size===latest.asset.size){lastProgressAt=Date.now();status('downloading','Đang tải gói cập nhật từ GitHub…',version,{downloadedBytes:size,totalBytes:latest.asset.size});}callback(null,chunk);}});
   await pipeline(Readable.fromWeb(response.body as any),limit,createWriteStream(zip,{mode:0o600}));
   if(size!==latest.asset.size||hash.digest('hex')!==latest.asset.sha256)throw Error('Mã kiểm tra SHA-256 không khớp; đã dừng cập nhật.');
   copyFileSync(join(root,'update-netwatch.ps1'),helper);

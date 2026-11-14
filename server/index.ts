@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {systemInfo,beginUpdate} from './updates';
+import {systemInfo,beginUpdate,updateStatus} from './updates';
 import {APP_VERSION} from './version';
 import {createServer} from 'node:http';
 import {getSupport,saveSupport} from './support';
@@ -82,7 +82,7 @@ const server=createServer(async(req,res)=>{
    if(path==='/api/session'&&method==='GET'){let displayName=auth?accountName(auth):null;if(auth==='owner'){try{const row:any=sqlite.prepare("SELECT value FROM settings WHERE key='admin_profile'").get();const value=row?JSON.parse(row.value):null;displayName=typeof value?.displayName==='string'&&value.displayName.trim()?value.displayName.trim():'Quản trị viên';}catch{displayName='Quản trị viên';}}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:APP_VERSION,loginId:createHash('sha256').update(/(?:^|;\s*)netwatch=([^;]+)/.exec(req.headers.cookie||'')?.[1]||'').digest('hex').slice(0,24),role:viewer?'viewer':'owner',username:auth?accountName(auth):null,...(isAdmin(auth)?{displayName}:{}),permissions:visiblePermissions(auth)}));return;}
    if(path==='/api/system'){
     res.setHeader('Content-Type','application/json');
-    if(method==='GET'){res.end(JSON.stringify(await systemInfo()));return;}
+    if(method==='GET'){res.end(JSON.stringify(url.searchParams.get('status')==='1'?{currentVersion:APP_VERSION,status:updateStatus()}:await systemInfo()));return;}
     if(method!=='POST'){res.writeHead(405);res.end();return;}
     if(!isAdmin(auth)){res.writeHead(403);res.end(JSON.stringify({error:'Chỉ quản trị viên được cập nhật.'}));return;}
     if(!browserOrigin(req,url)){res.writeHead(403);res.end(JSON.stringify({error:'Invalid origin'}));return;}

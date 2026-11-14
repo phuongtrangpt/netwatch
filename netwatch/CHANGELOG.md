@@ -1,3 +1,9 @@
+# 1.0.23
+
+- Thêm tiến trình tải cập nhật Windows theo phần trăm và dung lượng thực; vòng xoay và các bước kiểm tra, sao lưu/cài đặt, khởi động lại.
+- Hiện trạng thái ngay khi bấm cập nhật, tiếp tục hiển thị trong khi mất kết nối để khởi động lại và tự tải lại trang khi bản mới sẵn sàng.
+- Poll trạng thái qua API gọn, không gọi GitHub để đọc tiến trình.
+
 # 1.0.22
 
 - Thêm xóa dự án cho quản trị viên, hiển thị tên dự án và yêu cầu mật khẩu tài khoản quản trị đang đăng nhập để xác nhận.
