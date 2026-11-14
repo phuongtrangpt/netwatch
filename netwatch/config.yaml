@@ -1,5 +1,5 @@
 name: NetWatch Local
-version: "1.0.18"
+version: "1.0.19"
 slug: netwatch_local
 description: Giám sát MikroTik, lưu dữ liệu cục bộ
 arch:

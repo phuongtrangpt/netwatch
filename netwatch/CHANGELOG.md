@@ -1,4 +1,6 @@
-# 1.0.18
+# 1.0.19
+
+- Sửa Invalid origin khi thêm/sửa dự án hoặc lưu cấu hình qua HTTPS/reverse proxy: dùng kết quả xác thực origin của server, tiếp tục chặn yêu cầu khác nguồn.
 
 - Nâng tối đa 100 IP theo dõi và 32 switch ảo mỗi dự án; tăng giới hạn lưu vị trí, đường dây và điểm neo tương ứng.
 - Collector v6 ping được toàn bộ 100 IP; nâng cấp script router một lần bằng file tải ở mục Sơ đồ, giữ nguyên khóa kết nối.

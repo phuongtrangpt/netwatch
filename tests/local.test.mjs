@@ -36,6 +36,11 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   const assets=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css))"/g)].map(m=>m[1]);
   assert.ok(assets.some(p=>p.endsWith('.js')));assert.ok(assets.some(p=>p.endsWith('.css')));
   for(const asset of assets){const resource=await fetch(new URL(asset,origin),{headers:{cookie}});assert.equal(resource.status,200,asset);assert.match(resource.headers.get('content-type')||'',asset.endsWith('.js')?/javascript/:/text\/css/);assert.ok((await resource.text()).length>0);}
+  // A reverse proxy changes the internal URL while the browser stays on one origin.
+  r=await api('/api/projects',{name:'Dự án qua HTTPS proxy',model:'MikroTik',mode:'infrastructure'},{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin'});assert.equal(r.status,200,await r.clone().text());const proxyProject=(await r.json()).project;
+  r=await api('/api/projects',{id:proxyProject.id,name:'Đã sửa qua proxy',model:'RB4011',mode:'pppoe'},{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin'});assert.equal(r.status,200);
+  r=await api('/api/projects',{name:'Không được tạo',model:'MikroTik',mode:'infrastructure'},{origin:'https://foreign.example.test','sec-fetch-site':'cross-site'});assert.equal(r.status,403);
+  r=await api('/api/config',{wans:['ether1'],aliases:{ether1:'FPT'},manual:true},{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin'});assert.equal(r.status,200);
   const hundred=Array.from({length:100},(_,i)=>({id:'device-ip-'+i,name:'Thiết bị '+i,ip:'10.20.0.'+(i+1),type:'ap',parentId:'router',enabled:true,pinned:true}));
   const virtuals=Array.from({length:32},(_,i)=>({id:'device-virtual-'+i,name:'Switch ảo '+i,ip:'',type:'switch',parentId:'router',enabled:false,pinned:true,virtual:true}));
   const all=[...hundred,...virtuals],positions=Object.fromEntries(all.map((d,i)=>[d.id,{x:300,y:i*200}])),wireWaypoints=Object.fromEntries(all.map((d,i)=>['edge-'+d.id,[{x:200,y:i*200}]]));

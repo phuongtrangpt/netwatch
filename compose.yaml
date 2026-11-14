@@ -1,6 +1,6 @@
 services:
   netwatch:
-    image: ${NETWATCH_IMAGE:-ghcr.io/phuongtrangpt/netwatch:1.0.18}
+    image: ${NETWATCH_IMAGE:-ghcr.io/phuongtrangpt/netwatch:1.0.19}
     container_name: netwatch
     restart: unless-stopped
     env_file: .env
