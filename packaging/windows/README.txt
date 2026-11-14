@@ -31,5 +31,6 @@ Sau khi cai goi day du 1.0.17, vao Thong tin trang de kiem tra va cap nhat ban m
 Lan dang nhap quan tri se tu kiem tra va hoi khi co ban moi. Chi cai khi ban dong y.
 Goi duoc kiem tra SHA-256; du lieu duoc sao luu sau khi dung ung dung.
 Neu ban moi khong khoi dong duoc, trinh cap nhat phuc hoi ban cu va du lieu.
-Khong tat may khi cap nhat. Cua so ung dung moi can duoc giu khi su dung.
+Khong tat may khi cap nhat. Sau cap nhat tu web, NetWatch chay nen.
+De dung, ket thuc tien trinh node.exe cua NetWatch trong Task Manager.
 Ban sao luu va log nam trong data/updates; khong chia se thu muc nay.

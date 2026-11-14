@@ -50,7 +50,7 @@ export async function beginUpdate(version:string,shutdown:()=>void){
   const quote=(value:string)=>"'"+value.replace(/'/g,"''")+"'";
   const command=Buffer.from(`& ${quote(helper)} -RequestPath ${quote(request)}`,'utf16le').toString('base64');
   const powershell=join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
-  let child:ReturnType<typeof spawn>;try{child=spawn(powershell,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',command],{cwd:root,detached:true,stdio:['ignore',log,log],windowsHide:false});}finally{closeSync(log);}
+  let child:ReturnType<typeof spawn>;try{child=spawn(powershell,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',command],{cwd:root,detached:false,stdio:['ignore',log,log],windowsHide:true});}finally{closeSync(log);}
   let helperExited=false,helperCode:number|null=null;child.once('exit',(code)=>{helperExited=true;helperCode=code;});
   await new Promise<void>((ok,fail)=>{child.once('spawn',()=>ok());child.once('error',fail);});child.unref();
   // Helper validates the archive before requesting shutdown with a ready marker.

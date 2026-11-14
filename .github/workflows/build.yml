@@ -14,25 +14,21 @@ jobs:
   windows-launch-check:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Check detached PowerShell startup
+      - name: Check background PowerShell startup
         shell: pwsh
         run: |
           $env:PROBE_ROOT=Join-Path $env:RUNNER_TEMP ('probe '+[char]0x0111+' spaces')
           New-Item -ItemType Directory -Force -Path $env:PROBE_ROOT | Out-Null
           @'
           import {spawn} from 'node:child_process';
-          import {writeFileSync,readFileSync,existsSync,openSync,closeSync} from 'node:fs';
+          import {writeFileSync,existsSync,openSync,closeSync,readFileSync} from 'node:fs';
           import {join} from 'node:path';
-          const root=process.env.PROBE_ROOT,ps=join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe');
-          for(const detached of [true,false])for(const stdin of ['ignore','inherit']){
-            const name=String(detached)+stdin,script=join(root,name+'.ps1'),mark=join(root,name+'.mark'),logPath=join(root,name+'.log');
-            writeFileSync(script,`[IO.File]::WriteAllText('${mark.replaceAll("'","''")}','started')`);
-            const log=openSync(logPath,'a'),cmd=Buffer.from(`& '${script.replaceAll("'","''")}'`,'utf16le').toString('base64');
-            const child=spawn(ps,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',cmd],{cwd:root,detached,stdio:[stdin,log,log],windowsHide:false});closeSync(log);
-            const result=await new Promise(resolve=>{child.once('error',e=>resolve(String(e)));child.once('exit',(code,signal)=>resolve({code,signal}));});
-            console.log({name,result,mark:existsSync(mark),log:readFileSync(logPath,'utf8')});
-          }
+          const root=process.env.PROBE_ROOT,ps=join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe'),script=join(root,'check.ps1'),mark=join(root,'started'),logPath=join(root,'output.log');
+          writeFileSync(script,"param([string]$Marker)\n[IO.File]::WriteAllText($Marker,'started')");
+          const quote=v=>"'"+v.replaceAll("'","''")+"'",cmd=Buffer.from(`& ${quote(script)} -Marker ${quote(mark)}`,'utf16le').toString('base64'),log=openSync(logPath,'a');
+          const child=spawn(ps,['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',cmd],{cwd:root,detached:false,stdio:['ignore',log,log],windowsHide:true});closeSync(log);
+          const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});
+          console.log({code,started:existsSync(mark),log:readFileSync(logPath,'utf8')});if(code!==0||!existsSync(mark))process.exit(1);
           '@ | node --input-type=module
   check:
     runs-on: ubuntu-latest

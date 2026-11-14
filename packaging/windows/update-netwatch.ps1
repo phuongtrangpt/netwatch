@@ -79,7 +79,7 @@ try {
     if(-not $healthy){throw 'New version failed its health check.'}
     Set-UpdateStatus 'completed' 'Cap nhat thanh cong. Du lieu va tai khoan da duoc giu nguyen.'
     Write-Host "NetWatch $($request.targetVersion) dang chay. Du lieu: $dataDir" -ForegroundColor Green
-    Write-Host 'Giu cua so nay khi su dung. Nhan Ctrl+C de dung.'
+    Write-Host 'NetWatch chay nen sau cap nhat tu web.'
     $newProcess.WaitForExit()
 } catch {
     [IO.File]::WriteAllText((Join-Path $job 'updater.error.log'),($_ | Out-String),(New-Object Text.UTF8Encoding $false))
