@@ -1,6 +1,6 @@
 param([string]$Package,[string]$Archive)
 $ErrorActionPreference='Stop'
-$fixture=Join-Path $env:RUNNER_TEMP 'NetWatch update test co dau va khoang trang'
+$fixture=Join-Path $env:RUNNER_TEMP ('NetWatch '+[char]0x0111+[char]0x00E0+' with spaces')
 Copy-Item -LiteralPath $Package -Destination $fixture -Recurse
 $data=Join-Path $fixture 'data';New-Item -ItemType Directory -Force -Path $data | Out-Null
 $target=(Get-Content -LiteralPath (Join-Path $Package 'package.json') -Raw | ConvertFrom-Json).version
@@ -38,6 +38,10 @@ try{
  Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18091/login' -Method POST -Headers @{Origin='http://127.0.0.1:18091'} -Body @{username='admin';password='windows-update-test-password'} -WebSession $session | Out-Null
  $info=Invoke-RestMethod -Uri 'http://127.0.0.1:18091/api/session' -WebSession $session;if($info.username -ne 'admin'){throw 'Login after update failed'}
  Stop-Fixture;$updater.WaitForExit(10000) | Out-Null
+ # Failure before replacing files must restart the untouched old application.
+ Set-OldVersion;$env:NETWATCH_PASSWORD='windows-update-test-password';$old=Start-Old;Wait-Health '0.0.1'
+ $request=New-Request $Archive $old.Id;Set-Content -LiteralPath (Join-Path (Split-Path -Parent $request) 'backup') -Value 'block backup directory'
+ $preapply=Start-Helper $request;Wait-Ready $request;Stop-Process -Id $old.Id -Force;Wait-Status 'failed';Wait-Health '0.0.1';Stop-Fixture;$preapply.WaitForExit(10000) | Out-Null
  # A validated archive whose server fails startup must restore both app and data.
  $bad=Join-Path $updates 'bad-package';New-Item -ItemType Directory -Force -Path $bad | Out-Null
  foreach($item in @('node.exe','package.json','start-netwatch.ps1','Start-NetWatch.bat','README.txt','update-netwatch.ps1')){Copy-Item -LiteralPath (Join-Path $Package $item) -Destination $bad}
@@ -48,5 +52,5 @@ try{
  $request=New-Request $badArchive $old.Id;$rollback=Start-Helper $request;Wait-Ready $request;Stop-Process -Id $old.Id -Force;Wait-Status 'rolled_back';Wait-Health '0.0.1'
  if((Get-FileHash -LiteralPath (Join-Path $data 'auth.json')).Hash -ne $authHash){throw 'Rollback did not restore authentication'}
  if((Get-Content -LiteralPath (Join-Path $data 'sentinel.txt') -Raw).Trim() -ne 'preserve-me'){throw 'Rollback did not restore data'}
- Write-Host 'Windows updater: SHA, archive paths, successful update, login and rollback passed.'
+ Write-Host 'Windows updater: SHA, archive paths, successful update, login, pre-apply recovery and rollback passed.'
 }finally{Stop-Fixture}

@@ -1,4 +1,4 @@
-# 1.0.16
+# 1.0.17
 
 - Đổi mật khẩu quản trị ngay trên web; xác nhận mật khẩu hiện tại, thu hồi phiên cũ, giữ khóa router và mã hóa Telegram.
 - Thêm tài khoản quản trị toàn quyền, bật/tắt, đặt lại mật khẩu và xóa tài khoản bổ sung; giữ admin mặc định và không cho tự xóa/tắt tài khoản đang dùng.

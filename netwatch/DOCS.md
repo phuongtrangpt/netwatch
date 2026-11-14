@@ -94,7 +94,7 @@ Số phiên bản đang chạy hiển thị trên thanh đầu trang, chân tran
 
 Sơ đồ giữ nhánh WAN logic, loại cổng truyền dẫn PPPoE khỏi nhánh LAN (kể cả PPPoE qua VLAN). Không xóa interface, cấu hình WAN hoặc vị trí các thiết bị LAN đã ghim; việc ẩn đường chỉ tác động phần hiển thị sơ đồ.
 
-## Quản trị viên và cập nhật trên web (1.0.16)
+## Quản trị viên và cập nhật trên web (1.0.17)
 
 Trong **Cấu hình giám sát → Tài khoản quản trị**, đổi mật khẩu bằng mật khẩu hiện tại, mật khẩu mới và nhập lại. Mật khẩu dài 12–256 ký tự. Đổi thành công sẽ yêu cầu đăng nhập lại và thu hồi các phiên cũ của tài khoản đó; dữ liệu, khóa router và token Telegram không đổi.
 
@@ -104,7 +104,7 @@ Có thể tạo tối đa 20 quản trị viên bổ sung. Tài khoản quản t
 
 ### Windows portable
 
-Cần cập nhật thủ công một lần lên gói đầy đủ 1.0.16 hoặc mới hơn để có trình cập nhật. Từ đó chọn **Cập nhật ngay** trên web. Gói chỉ được lấy từ bản phát hành chính thức `phuongtrangpt/netwatch`, kiểm tra kích thước và SHA-256. Chương trình chuẩn bị xong gói mới rồi dừng server, sao lưu file ứng dụng và toàn bộ dữ liệu (trừ thư mục cập nhật), thay file, khởi động và kiểm tra phiên bản. Lỗi khởi động sẽ khôi phục ứng dụng và dữ liệu trước cập nhật.
+Cần cập nhật thủ công một lần lên gói đầy đủ 1.0.17 hoặc mới hơn để có trình cập nhật. Từ đó chọn **Cập nhật ngay** trên web. Gói chỉ được lấy từ bản phát hành chính thức `phuongtrangpt/netwatch`, kiểm tra kích thước và SHA-256. Chương trình chuẩn bị xong gói mới rồi dừng server, sao lưu file ứng dụng và toàn bộ dữ liệu (trừ thư mục cập nhật), thay file, khởi động và kiểm tra phiên bản. Lỗi khởi động sẽ khôi phục ứng dụng và dữ liệu trước cập nhật.
 
 Không tắt máy khi đang cập nhật. Giữ cửa sổ tiến trình mới khi ứng dụng chạy; nhấn Ctrl+C để dừng. Bản sao lưu và log của từng lần cập nhật ở `data/updates/<mã lần cập nhật>/`; không chia sẻ thư mục này vì có dữ liệu riêng. Cổng và biến môi trường của server được kế thừa. Nếu thư mục cài không có quyền ghi, cập nhật sẽ dừng và báo lỗi.
 

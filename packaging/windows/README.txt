@@ -26,8 +26,8 @@ Goi nay danh cho Windows 10/11 64-bit x86. Windows ARM, macOS va Linux co the ch
 image Docker da phat hanh (linux/amd64, linux/arm64, linux/arm/v7) bang Docker Desktop/Engine.
 Khong chia se thu muc data vi no chua thong tin dang nhap va cau hinh mang.
 
-CAP NHAT TREN WEB (TU 1.0.16)
-Sau khi cai goi day du 1.0.16, vao Thong tin trang de kiem tra va cap nhat ban moi.
+CAP NHAT TREN WEB (TU 1.0.17)
+Sau khi cai goi day du 1.0.17, vao Thong tin trang de kiem tra va cap nhat ban moi.
 Lan dang nhap quan tri se tu kiem tra va hoi khi co ban moi. Chi cai khi ban dong y.
 Goi duoc kiem tra SHA-256; du lieu duoc sao luu sau khi dung ung dung.
 Neu ban moi khong khoi dong duoc, trinh cap nhat phuc hoi ban cu va du lieu.

@@ -10,7 +10,7 @@ $statusPath=Join-Path $updates 'status.json'
 $stage=Join-Path $job 'stage'
 $backup=Join-Path $job 'backup'
 $items=@('dist','drizzle','node_modules','node.exe','package.json','start-netwatch.ps1','Start-NetWatch.bat','README.txt','update-netwatch.ps1')
-$installed=@();$saved=@();$newProcess=$null;$changed=$false;$dataBackedUp=$false
+$installed=@();$saved=@();$newProcess=$null;$changed=$false;$dataBackedUp=$false;$stopped=$false
 function Set-UpdateStatus([string]$phase,[string]$message){
     New-Item -ItemType Directory -Force -Path $updates | Out-Null
     $json=@{phase=$phase;message=$message;targetVersion=$request.targetVersion;at=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()} | ConvertTo-Json
@@ -49,6 +49,7 @@ try {
     Set-Content -LiteralPath (Join-Path $job 'ready') -Value 'ready'
     $old=Get-Process -Id ([int]$request.parentPid) -ErrorAction SilentlyContinue
     if($old -and -not $old.WaitForExit(120000)){throw 'Application did not stop. No files were changed.'}
+    $stopped=$true
     Set-UpdateStatus 'applying' 'Dang sao luu du lieu va thay ban moi...'
     New-Item -ItemType Directory -Force -Path (Join-Path $backup 'app'),(Join-Path $backup 'data') | Out-Null
     # SQLite was checkpointed and closed by the server before this copy.
@@ -86,7 +87,10 @@ try {
             $newProcess=Start-App
             Set-UpdateStatus 'rolled_back' 'Cap nhat loi; da phuc hoi ban cu va du lieu sao luu.'
             $newProcess.WaitForExit()
-        }else{Set-UpdateStatus 'failed' 'Khong the chuan bi cap nhat. Ban hien tai va du lieu khong thay doi.'}
+        }else{
+            if($stopped){$newProcess=Start-App;Set-UpdateStatus 'failed' 'Khong the thay file; da khoi dong lai ban cu, du lieu khong thay doi.';$newProcess.WaitForExit()}
+            else{Set-UpdateStatus 'failed' 'Khong the chuan bi cap nhat. Ban hien tai va du lieu khong thay doi.'}
+        }
     }catch{Set-UpdateStatus 'failed' 'Cap nhat bi dung. Hay khoi dong lai NetWatch; ban sao luu nam trong data/updates.'}
     exit 1
 }
