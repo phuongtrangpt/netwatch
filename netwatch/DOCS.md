@@ -106,7 +106,7 @@ Có thể tạo tối đa 20 quản trị viên bổ sung. Tài khoản quản t
 
 Cần cập nhật thủ công một lần lên gói đầy đủ 1.0.17 hoặc mới hơn để có trình cập nhật. Từ đó chọn **Cập nhật ngay** trên web. Gói chỉ được lấy từ bản phát hành chính thức `phuongtrangpt/netwatch`, kiểm tra kích thước và SHA-256. Chương trình chuẩn bị xong gói mới rồi dừng server, sao lưu file ứng dụng và toàn bộ dữ liệu (trừ thư mục cập nhật), thay file, khởi động và kiểm tra phiên bản. Lỗi khởi động sẽ khôi phục ứng dụng và dữ liệu trước cập nhật.
 
-Không tắt máy khi đang cập nhật. Giữ cửa sổ tiến trình mới khi ứng dụng chạy; nhấn Ctrl+C để dừng. Bản sao lưu và log của từng lần cập nhật ở `data/updates/<mã lần cập nhật>/`; không chia sẻ thư mục này vì có dữ liệu riêng. Cổng và biến môi trường của server được kế thừa. Nếu thư mục cài không có quyền ghi, cập nhật sẽ dừng và báo lỗi.
+Không tắt máy khi đang cập nhật. Sau cập nhật qua web, ứng dụng chạy nền; để dừng, kết thúc đúng tiến trình node.exe của NetWatch trong Task Manager. Bản sao lưu và log của từng lần cập nhật ở `data/updates/<mã lần cập nhật>/`; không chia sẻ thư mục này vì có dữ liệu riêng. Cổng và biến môi trường của server được kế thừa. Nếu thư mục cài không có quyền ghi, cập nhật sẽ dừng và báo lỗi.
 
 ### Home Assistant OS và Docker
 
