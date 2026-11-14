@@ -49,6 +49,32 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   r=await api('/api/dashboard');const large=await r.json();assert.equal(large.topology.devices.length,132);assert.equal(large.probes.results.length,100);
   r=await api('/api/topology',{revision:2,devices:[...all,{...hundred[0],id:'device-extra',ip:'10.20.0.101'}]});assert.equal(r.status,400);
   await stop();await start();r=await api('/api/dashboard');assert.equal((await r.json()).topology.devices.length,132);
+  const del=(id,confirmName,extra={})=>fetch(origin+'/api/projects',{method:'DELETE',headers:{...headers,...extra},body:JSON.stringify({id,confirmName})});
+  assert.equal((await del('main','Mạng chính')).status,400);
+  assert.equal((await del(proxyProject.id,'Sai tên')).status,400);
+  assert.equal((await del(proxyProject.id,'Đã sửa qua proxy',{origin:'https://foreign.example.test','sec-fetch-site':'cross-site'})).status,403);
+  r=await api('/api/pair?project='+proxyProject.id,{version:'7.21.5'});assert.equal(r.status,200);const removedToken=(await r.text()).match(/Authorization: Bearer ([a-f0-9]{64})/)[1];
+  const {default:Database}=await import('better-sqlite3');const inspect=new Database(join(data,'netwatch.db'));
+  try{
+   inspect.prepare('INSERT INTO settings(key,value) VALUES (?,?)').run(proxyProject.id+':topology',JSON.stringify({devices:[]}));
+   inspect.prepare('INSERT INTO settings(key,value) VALUES (?,?)').run('telegram_outbox:delete-test',JSON.stringify({project:proxyProject.id,createdAt:Date.now(),nextAttemptAt:Date.now()+999999}));
+   inspect.prepare('INSERT INTO settings(key,value) VALUES (?,?)').run('telegram_outbox:keep-test',JSON.stringify({project:'main',createdAt:Date.now(),nextAttemptAt:Date.now()+999999}));
+   inspect.prepare('INSERT INTO project_history(project_id,minute,data) VALUES (?,?,?)').run(proxyProject.id,1,'{}');
+   inspect.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').run('delete-event',1,'info','test',proxyProject.id);
+   inspect.prepare('INSERT INTO section_chunks(name,generation,part,data,received_at) VALUES (?,?,?,?,?)').run(proxyProject.id+':interfaces','test',0,'[]',1);
+   inspect.prepare('INSERT INTO section_heads(name,generation,updated_at) VALUES (?,?,?)').run(proxyProject.id+':interfaces','test',1);
+   inspect.exec("CREATE TRIGGER block_project_delete BEFORE DELETE ON projects BEGIN SELECT RAISE(ABORT,'fixture failure');END");
+   assert.equal((await del(proxyProject.id,'Đã sửa qua proxy')).status,500);assert.ok(inspect.prepare('SELECT id FROM router WHERE id=?').get(proxyProject.id));assert.ok(inspect.prepare('SELECT key FROM settings WHERE key=?').get(proxyProject.id+':topology'));
+   inspect.exec('DROP TRIGGER block_project_delete');
+   r=await del(proxyProject.id,'Đã sửa qua proxy',{origin:'https://netwatch.example.test','sec-fetch-site':'same-origin'});assert.equal(r.status,200,await r.clone().text());assert.ok(!(await r.json()).projects.some(p=>p.id===proxyProject.id));
+   for(const table of ['router','projects'])assert.equal(inspect.prepare(`SELECT count(*) n FROM ${table} WHERE id=?`).get(proxyProject.id).n,0);
+   for(const table of ['events','project_history'])assert.equal(inspect.prepare(`SELECT count(*) n FROM ${table} WHERE project_id=?`).get(proxyProject.id).n,0);
+   for(const table of ['section_chunks','section_heads'])assert.equal(inspect.prepare(`SELECT count(*) n FROM ${table} WHERE name=?`).get(proxyProject.id+':interfaces').n,0);
+   assert.equal(inspect.prepare('SELECT count(*) n FROM settings WHERE key IN (?,?)').get(proxyProject.id+':topology','telegram_outbox:delete-test').n,0);assert.ok(inspect.prepare("SELECT key FROM settings WHERE key='telegram_outbox:keep-test'").get());assert.ok(inspect.prepare("SELECT key FROM settings WHERE key='topology'").get());
+  }finally{inspect.close();}
+  assert.equal((await fetch(origin+'/api/ingest?project='+proxyProject.id,{method:'POST',headers:{authorization:'Bearer '+removedToken},body:JSON.stringify({schema:1,kind:'metrics',resource:{},stats:[]})})).status,401);
+  assert.equal((await del(proxyProject.id,'Đã sửa qua proxy')).status,404);
+  await stop();await start();r=await api('/api/projects');assert.ok(!(await r.json()).projects.some(p=>p.id===proxyProject.id));
  }finally{if(child&&child.exitCode===null)await stop();rmSync(data,{recursive:true,force:true});}
 });
 
@@ -87,6 +113,7 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   for(const project of projects.projects){r=await api('/api/dashboard?project='+project.id,viewer.cookie);assert.equal(r.status,200);}
   for(const path of ['/api/projects','/api/topology','/api/config','/api/pair','/api/viewer','/api/future-write-route']){r=await api(path,viewer.cookie,{enabled:false}, {'oai-authenticated-user-id':'owner','x-role':'owner'});assert.equal(r.status,403,path);}
   for(const path of ['/api/upgrade','/api/viewer'])assert.equal((await api(path,viewer.cookie)).status,403,path);
+  assert.equal((await fetch(origin+'/api/projects',{method:'DELETE',headers:{origin,cookie:viewer.cookie,'Content-Type':'application/json'},body:JSON.stringify({id:'main',confirmName:'Mạng chính'})})).status,403);
   const forged=viewer.cookie.replace('netwatch=','netwatch=x');assert.equal((await api('/api/dashboard',forged)).status,401);
   r=await api('/api/config',admin.cookie,{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/topology',admin.cookie,{revision:0,devices:[{id:'device-'+ 'a'.repeat(32),name:'WiFi',ip:'10.10.10.5',type:'ap',enabled:true,pinned:true,parentId:'router'}],positions:{},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());

@@ -117,3 +117,7 @@ Docker: tải image mới, tạo lại container theo cách đã cài và giữ 
 ### Giới hạn sơ đồ từ 1.0.19
 
 Mỗi dự án hỗ trợ 100 IP theo dõi và 32 switch ảo. Sau khi cập nhật server, tải bản nâng cấp collector v6 ở mục Sơ đồ và import vào router để kiểm tra đủ 100 IP; script cũ chỉ ping 16 IP. Không tạo lại khóa. Mỗi IP vẫn được ping 2 gói; khi nhiều IP mất kết nối, vòng kiểm tra có thể kéo dài hơn.
+
+### Xóa dự án
+
+Vào Dự án, bấm biểu tượng thùng rác và nhập đúng tên để xóa. Chỉ quản trị viên được xóa. Dữ liệu, khóa kết nối và hàng đợi Telegram của dự án bị xóa; dữ liệu dự án khác được giữ. Mạng chính là dự án mặc định nên không thể xóa, có thể đổi tên/cấu hình lại. Muốn ngừng gửi dữ liệu, gỡ bộ thu thập NetWatch trên router theo hướng dẫn Kết nối router trước khi xóa.

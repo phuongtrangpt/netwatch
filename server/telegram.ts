@@ -57,6 +57,7 @@ export async function retryTelegramAlerts(db:Store){
   let tried=0;
   for(const row of rows.results.sort((a:any,b:any)=>JSON.parse(a.value).createdAt-JSON.parse(b.value).createdAt)){
    const item=JSON.parse(row.value),now=Date.now();
+   if(!await findProject(db as any,item.project)){await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();continue;}
    if(now-item.createdAt>86400000){
     await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();
     await db.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),now,'warning',`Telegram không gửi được tới Chat ID ${item.chatId} sau 24 giờ; đã dừng thử lại.`,item.project).run();continue;

@@ -1,3 +1,8 @@
+# 1.0.21
+
+- Thêm xóa dự án cho quản trị viên, yêu cầu nhập đúng tên dự án để xác nhận.
+- Xóa dữ liệu theo dự án trong một giao dịch, thu hồi khóa kết nối và dọn hàng đợi Telegram; giữ dữ liệu dự án khác và dự án mặc định Mạng chính.
+
 # 1.0.20
 
 - Kiểm tra phiên bản ưu tiên manifest đi kèm bản phát hành, giảm phụ thuộc vào giới hạn GitHub API; vẫn xác minh URL, dung lượng và SHA-256 gói Windows.
