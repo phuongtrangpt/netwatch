@@ -1,0 +1,6 @@
+import {database,browserUser,sameOrigin,json} from '../../../lib/server';
+import {findProject,projectId} from '../../../lib/projects';
+import {necStatus,saveNEC,pollNEC} from '../../../server/nec';
+async function authorize(req:Request){if(await browserUser()!=='owner')return json({error:'Chỉ quản trị viên được cấu hình SNMP'},403);const project=await findProject(database(),projectId(req));if(project?.vendor!=='nec')return json({error:'Dự án không sử dụng NEC'},400);return null;}
+export async function GET(req:Request){try{const error=await authorize(req);if(error)return error;return json(necStatus(projectId(req)));}catch{return json({error:'Không đọc được cấu hình SNMP'},400);}}
+export async function POST(req:Request){try{const error=await authorize(req);if(error)return error;if(!sameOrigin(req))return json({error:'Invalid origin'},403);const id=projectId(req),input=await req.json() as any;if(input.action==='poll'){if(necStatus(id).busy)return json({error:'Đang đọc SNMP, chờ vài giây rồi kiểm tra lại.'},409);if(!necStatus(id).config.enabled)return json({error:'Lưu và bật SNMP trước khi kiểm tra'},400);await pollNEC(id);return json(necStatus(id));}return json(await saveNEC(id,input));}catch(e){return json({error:e instanceof Error?e.message:'Không lưu được SNMP'},400);}}

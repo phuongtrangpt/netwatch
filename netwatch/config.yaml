@@ -1,7 +1,7 @@
 name: NetWatch Local
-version: "1.0.24"
+version: "1.0.25"
 slug: netwatch_local
-description: Giám sát MikroTik, lưu dữ liệu cục bộ
+description: Giám sát MikroTik và NEC SNMP thử nghiệm, lưu dữ liệu cục bộ
 arch:
   - aarch64
   - armv7

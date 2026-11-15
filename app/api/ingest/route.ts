@@ -1,14 +1,20 @@
 import {refreshDiscovery} from '../../../lib/discovery';
 import {database,json} from '../../../lib/server';
 import {sha256,ingestError,list,truth,rates,wanNames} from '../../../lib/core';
-import {projectId,scopedKey} from '../../../lib/projects';
+import {projectId,scopedKey,findProject} from '../../../lib/projects';
 import {wanProbeTransition} from '../../../lib/wan-alerts';
 import {sendWanReminders} from '../../../server/wan-reminders';
 import {sendTelegram} from '../../../server/telegram';
 export async function POST(req:Request){try{
  const auth=req.headers.get('authorization');if(!auth?.startsWith('Bearer '))return json({error:'Unauthorized'},401);
  const db=database(),id=projectId(req);const router:any=await db.prepare('SELECT * FROM router WHERE id=?').bind(id).first();if(!router||await sha256(auth.slice(7))!==router.token_hash)return json({error:'Unauthorized'},401);
- const reader=req.body?.getReader();if(!reader)return json({error:'Empty body'},400);let size=0;const chunks:Uint8Array[]=[];while(true){const r=await reader.read();if(r.done)break;size+=r.value.byteLength;if(size>65536){await reader.cancel();return json({error:'Payload too large'},413);}chunks.push(r.value);}const raw=new Uint8Array(size);let offset=0;for(const c of chunks){raw.set(c,offset);offset+=c.length;}let body:any;try{body=JSON.parse(new TextDecoder().decode(raw));}catch{return json({error:'Invalid JSON'},400);}const error=ingestError(body);if(error)return json({error},400);
+ const project=await findProject(db,id);if(project?.vendor==='nec')return json({error:'NEC chỉ nhận dữ liệu từ bộ thu thập SNMP nội bộ'},403);
+ const reader=req.body?.getReader();if(!reader)return json({error:'Empty body'},400);let size=0;const chunks:Uint8Array[]=[];while(true){const r=await reader.read();if(r.done)break;size+=r.value.byteLength;if(size>65536){await reader.cancel();return json({error:'Payload too large'},413);}chunks.push(r.value);}const raw=new Uint8Array(size);let offset=0;for(const c of chunks){raw.set(c,offset);offset+=c.length;}let body:any;try{body=JSON.parse(new TextDecoder().decode(raw));}catch{return json({error:'Invalid JSON'},400);}return await storeTelemetry(db,id,body);
+ }catch{return json({error:'Unable to store telemetry'},500);}}
+
+export async function storeTelemetry(db:any,id:string,body:any){try{
+ const router:any=await db.prepare('SELECT * FROM router WHERE id=?').bind(id).first();if(!router||!await findProject(db,id))return json({error:'Project disconnected'},409);
+ const error=ingestError(body);if(error)return json({error},400);
  if(body.kind==='section'&&body.section.startsWith('ppp')){const allowed:Record<string,string[]>={pppactive:['name','service','caller-id','address','uptime','session-id'],pppaccounts:['name','service','profile','local-address','remote-address','caller-id','disabled'],pppprofiles:['name','local-address','remote-address','rate-limit','only-one','use-encryption'],pppservers:['service-name','interface','default-profile','disabled','max-mtu','max-mru','one-session-per-host','max-sessions']};body.rows=body.rows.map((row:any)=>Object.fromEntries((allowed[body.section]||[]).filter(k=>row?.[k]!==undefined&&['string','number','boolean'].includes(typeof row[k])).map(k=>[k,row[k]])));}
 
  const now=Date.now(),statements:any[]=[],telegramAlerts:string[]=[];let wanTargets:any[]=[];const read=async(k:string,f:any)=>{const r:any=await db.prepare('SELECT value FROM settings WHERE key=?').bind(scopedKey(id,k)).first();return r?JSON.parse(r.value):f;};const topology=await read('topology',{revision:0,devices:[]});

@@ -30,6 +30,15 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   r=await api('/api/topology',{revision:0,devices:[{id:'device-aaa',name:'WiFi Tầng 2',ip:'10.10.10.5',type:'ap',parentId:'router',enabled:true,pinned:true}],layoutMode:'manual',positions:{'device-aaa':{x:260,y:300}},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
   r=await api('/api/topology',{revision:0,devices:[]});assert.equal(r.status,409);
   r=await api('/api/projects',{name:'Nhà trọ',model:'MikroTik',mode:'pppoe'});assert.equal(r.status,200);
+  r=await api('/api/projects',{name:'NEC thử nghiệm',vendor:'nec',model:'IX2106',mode:'infrastructure'});assert.equal(r.status,200);const necProject=(await r.json()).project;assert.equal(necProject.vendor,'nec');
+  assert.equal((await api('/api/pair?project='+necProject.id,{version:'7.21.5'})).status,400);
+  assert.equal((await api('/api/upgrade?project='+necProject.id)).status,400);
+  assert.equal((await api('/api/projects',{id:necProject.id,name:'Đổi hãng',vendor:'mikrotik',model:'MikroTik',mode:'infrastructure'})).status,400);
+  r=await api('/api/nec?project='+necProject.id,{enabled:false,host:'192.0.2.1',port:161,community:'nec-secret-test'});assert.equal(r.status,200);assert.ok(!(await r.text()).includes('nec-secret-test'));
+  r=await api('/api/nec?project='+necProject.id);assert.equal(r.status,200);assert.ok(!(await r.text()).includes('nec-secret-test'));
+  assert.equal((await api('/api/nec?project=main')).status,400);
+  const {default:NECDB}=await import('better-sqlite3');const necInspect=new NECDB(join(data,'netwatch.db'));const necRow=necInspect.prepare('SELECT value FROM settings WHERE key=?').get(necProject.id+':nec_snmp');assert.ok(!necRow.value.includes('nec-secret-test'));assert.match(necRow.value,/^v1\./);necInspect.close();
+  assert.equal((await fetch(origin+'/api/projects',{method:'DELETE',headers,body:JSON.stringify({id:necProject.id,currentPassword:'test-password-12345'})})).status,200);
   const persisted=JSON.parse(readFileSync(join(data,'auth.json'),'utf8'));assert.ok(!JSON.stringify(persisted).includes('test-password'));
   await stop();await start();
   r=await api('/api/dashboard');assert.equal(r.status,200);const state=await r.json();assert.equal(state.config.aliases.ether1,'FPT');assert.equal(state.topology.devices[0].name,'WiFi Tầng 2');assert.equal(state.topology.positions['device-aaa'].x,260);assert.equal(state.metrics.resource['cpu-load'],20);assert.equal(state.history.length,1);

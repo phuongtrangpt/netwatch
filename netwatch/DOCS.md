@@ -1,3 +1,7 @@
+## Chọn hãng thiết bị (1.0.25)
+
+Khi tạo dự án, chọn MikroTik hoặc NEC. Dự án MikroTik cũ giữ nguyên cách kết nối. NEC IX2106 dùng SNMP v2c chỉ đọc từ máy chủ trong LAN/VPN và đang thử nghiệm, chưa kiểm thử router thật. Xem [hướng dẫn và phạm vi NEC](../docs/NEC.md).
+
 ## Miễn trừ trách nhiệm và lưu ý vận hành
 
 NetWatch là phần mềm cộng đồng, được cung cấp theo hiện trạng và có thể có lỗi. Hãy sao lưu, thử nghiệm trước khi dùng trên mạng đang hoạt động; việc thu thập dữ liệu và ping có thể ảnh hưởng hiệu năng hoặc độ ổn định trong một số môi trường.

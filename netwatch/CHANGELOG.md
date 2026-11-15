@@ -1,3 +1,10 @@
+# 1.0.25
+
+- Thêm chọn hãng MikroTik / NEC khi tạo dự án; dự án cũ giữ MikroTik.
+- NEC IX2106: kết nối SNMP v2c chỉ đọc từ máy chủ, community mã hóa, kiểm tra kết nối và báo lỗi trên web.
+- Thu thập tên, mô tả firmware, uptime SNMP, trạng thái interface và lưu lượng Counter64; WAN chọn thủ công, dùng chung nhật ký và cảnh báo link Telegram.
+- NEC đang thử nghiệm, chưa kiểm thử trên IX2106 thật; chưa có ping IP, private MIB, DHCP/ARP, route hoặc quản lý tài khoản PPPoE. Xem docs/NEC.md.
+
 # 1.0.24
 
 - Bổ sung miễn trừ trách nhiệm và lưu ý sử dụng tại đăng nhập, Thông tin trang, tài liệu và trang công khai /disclaimer; có thể đọc trước khi đăng nhập.

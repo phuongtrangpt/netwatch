@@ -14,7 +14,7 @@ export function rates(current:Row,previous:Row|null,at:number,prevAt:number|null
  const out:Record<string,Row>={};const elapsed=prevAt?(at-prevAt)/1000:0;
  const cu=seconds(current.resource?.uptime),pu=seconds(previous?.resource?.uptime);
  const safe=elapsed>0&&elapsed<=180&&cu!==null&&pu!==null&&cu>pu;
- for(const c of list(current.stats)){const p=list(previous?.stats).find(x=>x.name===c.name);const rx=num(c['rx-byte']),tx=num(c['tx-byte']),pr=num(p?.['rx-byte']),pt=num(p?.['tx-byte']);out[c.name]={rx:safe&&p&&rx!==null&&pr!==null&&rx>=pr?(rx-pr)*8/elapsed:null,tx:safe&&p&&tx!==null&&pt!==null&&tx>=pt?(tx-pt)*8/elapsed:null};}return out;
+ for(const c of list(current.stats)){const p=list(previous?.stats).find(x=>x.name===c.name);const rx=num(c['rx-byte']),tx=num(c['tx-byte']),pr=num(p?.['rx-byte']),pt=num(p?.['tx-byte']);if(c.counterBits===64){const delta=(key:string)=>{if(!safe||!p||p.counterBits!==64||p.ifIndex!==c.ifIndex||p.counterEpoch!==c.counterEpoch||!/^\d+$/.test(String(c[key]))||!/^\d+$/.test(String(p[key])))return null;const diff=BigInt(c[key])-BigInt(p[key]);return diff>=0n&&diff<=BigInt(Number.MAX_SAFE_INTEGER)?Number(diff)*8/elapsed:null;};out[c.name]={rx:delta('rx-byte'),tx:delta('tx-byte')};continue;}out[c.name]={rx:safe&&p&&rx!==null&&pr!==null&&rx>=pr?(rx-pr)*8/elapsed:null,tx:safe&&p&&tx!==null&&pt!==null&&tx>=pt?(tx-pt)*8/elapsed:null};}return out;
 }
 export function clients(sections:Record<string,Row[]>){
  const map=new Map<string,Row>();

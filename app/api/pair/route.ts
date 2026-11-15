@@ -7,7 +7,7 @@ export async function POST(req:Request){
  if(!await browserUser())return json({error:'Vui lòng đăng nhập'},401);
  if(!sameOrigin(req))return json({error:'Invalid origin'},403);
  try{
- const db=database(),id=projectId(req),project=await findProject(db,id);if(!project)return json({error:'Không tìm thấy dự án'},404);const {version,replace}=await req.json() as any;const match=String(version||'').match(/^(\d+)\.(\d+)(?:\.(\d+))?(?:\s|$|\()/);if(!match||+match[1]!==7||+match[2]<17)return json({error:'Bộ cài này cần RouterOS 7.17 trở lên (nhánh 7.x). Gửi phiên bản hiện tại để được hỗ trợ; không cần tự nâng cấp.'},400);
+ const db=database(),id=projectId(req),project=await findProject(db,id);if(!project)return json({error:'Không tìm thấy dự án'},404);if(project.vendor==='nec')return json({error:'NEC sử dụng kết nối SNMP, không dùng script RouterOS.'},400);const {version,replace}=await req.json() as any;const match=String(version||'').match(/^(\d+)\.(\d+)(?:\.(\d+))?(?:\s|$|\()/);if(!match||+match[1]!==7||+match[2]<17)return json({error:'Bộ cài này cần RouterOS 7.17 trở lên (nhánh 7.x). Gửi phiên bản hiện tại để được hỗ trợ; không cần tự nâng cấp.'},400);
  const serviceToken='';
  const existing=await db.prepare('SELECT id FROM router WHERE id=?').bind(id).first();if(existing&&replace!==true)return json({error:'Đã có khóa kết nối. Xác nhận tạo lại để thay thế bộ cài cũ.'},409);
  const token=secret();const hash=await sha256(token);const now=Date.now();

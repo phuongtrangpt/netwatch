@@ -1,9 +1,9 @@
-# NetWatch · Giám sát MikroTik
+# NetWatch · Giám sát MikroTik & NEC
 
 > **Lưu ý sử dụng:** NetWatch là phần mềm cộng đồng, được cung cấp theo hiện trạng và có thể có lỗi. Hãy sao lưu, thử nghiệm trước khi dùng trên mạng đang hoạt động; việc thu thập dữ liệu và ping có thể ảnh hưởng hiệu năng hoặc độ ổn định trong một số môi trường. [Đọc miễn trừ trách nhiệm và lưu ý đầy đủ](DISCLAIMER.md).
 
 Chạy trên Windows, Linux, macOS hoặc Home Assistant OS, lưu dữ liệu tại máy chủ NetWatch.
-Sơ đồ mạng kéo thả, ghim/alias, switch ảo, chỉnh neo/đường dây, nhiều dự án MikroTik,
+Sơ đồ mạng kéo thả, ghim/alias, switch ảo, chỉnh neo/đường dây, nhiều dự án MikroTik và NEC (thử nghiệm),
 DHCP/PPPoE và lịch sử lưu cục bộ trong `/data`.
 
 [![Bản phát hành](https://img.shields.io/github/v/release/phuongtrangpt/netwatch?label=Phi%C3%AAn%20b%E1%BA%A3n)](https://github.com/phuongtrangpt/netwatch/releases/latest)
@@ -18,6 +18,8 @@ DHCP/PPPoE và lịch sử lưu cục bộ trong `/data`.
 - Sơ đồ kéo thả, ghim thiết bị và theo dõi IP quan trọng.
 - Cảnh báo Telegram khi có sự cố, nhắc lại theo cấu hình.
 - Nhiều dự án, tài khoản chỉ xem và dữ liệu lưu tại máy chủ của bạn.
+
+**NEC IX2106:** chọn hãng NEC khi tạo dự án và kết nối SNMP v2c trong LAN/VPN. Hỗ trợ ban đầu tên/uptime/interface/lưu lượng; chưa kiểm thử router thật. [Phạm vi và hướng dẫn NEC](docs/NEC.md).
 
 **[Tải gói Windows x64](https://github.com/phuongtrangpt/netwatch/releases/latest)** · **[Hướng dẫn cài và cấu hình](netwatch/DOCS.md)**
 
@@ -52,12 +54,12 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.24)
+## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.25)
 
 ![Hướng dẫn cài NetWatch trên Windows x64](docs/images/install-windows.svg)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.24.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.24` hoặc `compose.yaml`.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.25.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.25` hoặc `compose.yaml`.
 - Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon và máy chủ ARM64, `linux/arm/v7` cho hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
 - **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; máy chủ aarch64 tự nhận image ARM64.
 
@@ -65,7 +67,7 @@ Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.24`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.25`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 Chọn kiến trúc theo phần cứng máy chủ: x86-64, ARM64 hoặc ARMv7.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 
