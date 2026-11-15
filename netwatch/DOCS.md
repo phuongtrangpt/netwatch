@@ -2,7 +2,7 @@
 
 NetWatch là phần mềm cộng đồng, được cung cấp theo hiện trạng và có thể có lỗi. Hãy sao lưu, thử nghiệm trước khi dùng trên mạng đang hoạt động; việc thu thập dữ liệu và ping có thể ảnh hưởng hiệu năng hoặc độ ổn định trong một số môi trường.
 
-Đọc nội dung đầy đủ tại [DISCLAIMER.md](../DISCLAIMER.md) hoặc mở /disclaimer trên máy chủ NetWatch trước khi triển khai. Đang xác minh một báo cáo PPPoE FPT chập chờn khi bộ thu thập hoạt động; chưa kết luận nguyên nhân, và bản 1.0.24 không phải bản sửa sự cố PPPoE.
+Đọc nội dung đầy đủ tại [DISCLAIMER.md](../DISCLAIMER.md) hoặc mở /disclaimer trên máy chủ NetWatch trước khi triển khai.
 
 # Cài và cấu hình
 

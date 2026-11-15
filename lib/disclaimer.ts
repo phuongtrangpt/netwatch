@@ -33,12 +33,5 @@ export const DISCLAIMER_SECTIONS=[
       "Trong phạm vi pháp luật áp dụng cho phép, tác giả và người đóng góp không cung cấp bảo đảm về phần mềm và không chịu trách nhiệm đối với thiệt hại phát sinh từ việc sử dụng, không sử dụng được hoặc triển khai/cấu hình phần mềm, bao gồm gián đoạn kết nối, mất dữ liệu, doanh thu hay chi phí khôi phục.",
       "Nội dung này không loại trừ hoặc hạn chế các quyền của người sử dụng và trách nhiệm mà pháp luật bắt buộc áp dụng, cũng không thay thế thỏa thuận riêng hợp pháp giữa các bên. Đây là thông báo về điều kiện và rủi ro sử dụng, không phải cam kết đã loại bỏ mọi trách nhiệm pháp lý."
     ]
-  },
-  {
-    "title": "6. Lưu ý vận hành đang được xác minh — 15/11/2026",
-    "paragraphs": [
-      "Đã nhận báo cáo một mạng dùng RB5009/RouterOS 7.21.5 có phiên PPPoE FPT không ổn định khi bộ thu thập NetWatch hoạt động và ổn định hơn sau khi tạm dừng. Chưa xác định quan hệ nhân quả hoặc thành phần gây ra sự cố; không khẳng định mọi thiết bị hay đường truyền FPT đều bị ảnh hưởng.",
-      "Nếu gặp hiện tượng tương tự, tạm dừng lịch netwatch-upload, giữ log đã che thông tin bí mật và đối chiếu trước/sau khi bật từng chức năng giám sát. Phiên bản bổ sung thông báo này không phải bản sửa hoặc xác nhận đã xử lý được nguyên nhân sự cố PPPoE."
-    ]
   }
 ];
