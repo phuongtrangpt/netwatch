@@ -1,3 +1,9 @@
+# 1.0.24
+
+- Bổ sung miễn trừ trách nhiệm và lưu ý sử dụng tại đăng nhập, Thông tin trang, tài liệu và trang công khai /disclaimer; có thể đọc trước khi đăng nhập.
+- Nêu rõ phần mềm theo hiện trạng, rủi ro vận hành/cảnh báo/dữ liệu, yêu cầu sao lưu/thử nghiệm và giới hạn trách nhiệm trong phạm vi pháp luật cho phép.
+- Công khai báo cáo PPPoE đang xác minh; đây là cập nhật nội dung, chưa sửa hoặc kết luận nguyên nhân sự cố FPT.
+
 # 1.0.23
 
 - Thêm tiến trình tải cập nhật Windows theo phần trăm và dung lượng thực; vòng xoay và các bước kiểm tra, sao lưu/cài đặt, khởi động lại.

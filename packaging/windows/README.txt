@@ -34,3 +34,10 @@ Neu ban moi khong khoi dong duoc, trinh cap nhat phuc hoi ban cu va du lieu.
 Khong tat may khi cap nhat. Sau cap nhat tu web, NetWatch chay nen.
 De dung, ket thuc tien trinh node.exe cua NetWatch trong Task Manager.
 Ban sao luu va log nam trong data/updates; khong chia se thu muc nay.
+
+LUU Y SU DUNG VA MIEN TRU TRACH NHIEM
+NetWatch la phan mem cong dong, cung cap theo hien trang, co the co loi.
+Sao luu router va thu muc data, thu nghiem truoc khi trien khai tren mang that.
+Ping va thu thap du lieu co the anh huong hieu nang/do on dinh trong mot so moi truong.
+Mo http://localhost:8080/disclaimer (doi cong neu ban dung cong khac) de doc day du.
+Thong bao nay khong loai tru cac quyen va trach nhiem bat buoc theo phap luat.

@@ -1,3 +1,4 @@
+import {disclaimerHTML} from './disclaimer';
 import {createHash} from 'node:crypto';
 import {systemInfo,beginUpdate,updateStatus} from './updates';
 import {APP_VERSION} from './version';
@@ -46,6 +47,7 @@ const server=createServer(async(req,res)=>{
   const method=req.method||'GET',path=url.pathname;
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Cache-Control','no-store');
   if(path==='/healthz'&&method==='GET'){res.setHeader('X-NetWatch-Version',APP_VERSION);res.end('ok');return;}
+  if(path==='/disclaimer'){if(!['GET','HEAD'].includes(method)){res.writeHead(405,{'Allow':'GET, HEAD'});res.end();return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(method==='HEAD'?undefined:disclaimerHTML);return;}
   const auth=authenticated(req.headers.cookie||'');
   const viewer=!!auth&&auth.startsWith('viewer:');
   const ingestRequest=path==='/api/ingest'&&method==='POST';

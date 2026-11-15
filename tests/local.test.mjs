@@ -14,6 +14,8 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
  async function stop(){child.kill('SIGTERM');await once(child,'exit');}
  try{
   await start();
+  const disclosure=await fetch(origin+'/disclaimer');assert.equal(disclosure.status,200);assert.match(disclosure.headers.get('content-type'),/text\/html/);const disclosureHtml=await disclosure.text();assert.ok(disclosureHtml.includes('Miễn trừ trách nhiệm và lưu ý sử dụng'));assert.ok(disclosureHtml.includes('không loại trừ'));assert.ok(!disclosureHtml.includes('test-password-12345'));
+  assert.equal((await fetch(origin+'/disclaimer',{method:'HEAD'})).status,200);assert.equal((await fetch(origin+'/disclaimer',{method:'POST'})).status,405);assert.ok((await (await fetch(origin+'/login')).text()).includes('href="/disclaimer"'));
   assert.equal((await fetch(origin+'/api/dashboard',{headers:{'oai-authenticated-user-id':'fake'}})).status,401);
   assert.equal((await fetch(origin+'/api/ingest',{method:'POST',body:'{}'})).status,401);
   let r=await fetch(origin+'/login',{method:'POST',headers:{origin,'Content-Type':'application/x-www-form-urlencoded'},body:'password=test-password-12345',redirect:'manual'});assert.equal(r.status,303,output);const cookie=r.headers.get('set-cookie').split(';')[0];
