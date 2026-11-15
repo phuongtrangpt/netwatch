@@ -1,6 +1,6 @@
 import { describe,it } from 'node:test';
 import assert from 'node:assert/strict';
-import { rates,clients,wanNames,ingestError,seconds } from '../lib/core.ts';
+import { rates,clients,wanNames,ingestError,seconds,pingRttMs } from '../lib/core.ts';
 describe('telemetry',()=>{
  it('calculates bits/sec, rejects reboot, missing counters and stale samples',()=>{
  const a={resource:{uptime:'1h'},stats:[{name:'ether1','rx-byte':1000,'tx-byte':2000}]};
@@ -22,3 +22,5 @@ describe('telemetry',()=>{
  assert.equal(seconds('1w2d03:04:05'),788645);
  });
 });
+
+it('accepts optional measured RTT from new collectors and leaves old/missing/failed ping unknown',()=>{const p={id:'device-a',ip:'192.168.1.2',sent:2,received:2,rttUs:1245};assert.equal(pingRttMs(p),1.245);assert.equal(pingRttMs({...p,received:0}),null);assert.equal(pingRttMs({...p,error:true}),null);assert.equal(pingRttMs({...p,rttUs:undefined}),null);assert.equal(ingestError({schema:1,kind:'probes',results:[p]}),null);assert.ok(ingestError({schema:1,kind:'probes',results:[{...p,rttUs:-1}]}));});

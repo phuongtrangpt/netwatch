@@ -1,5 +1,6 @@
 export function wanProbeTransition(prior:any,probe:{received:number;error?:boolean},now:number){
- const failed=!!probe.error||probe.received===0;
+ if(probe.error)return {status:'unknown',confirmedStatus:prior?.confirmedStatus||(prior?.status==='online'||prior?.status==='offline'?prior.status:null),failures:0,transition:null};
+ const failed=probe.received===0;
  const continuous=prior&&now-prior.at<150000;
  const failures=failed?(continuous?(prior.failures||0)+1:1):0;
  const status=failed?(failures>=2?'offline':'checking'):'online';

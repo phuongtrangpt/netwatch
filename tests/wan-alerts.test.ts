@@ -16,7 +16,8 @@ test('WAN alerts confirm outages and never report first failed ping as recovery'
 });
 test('WAN offline at first observation is reported after two failed probes',()=>{
  const first=step(null,{received:0,error:true},30000);
- assert.equal(first.transition,null);
+ assert.equal(first.transition,null);assert.equal(first.status,'unknown');
  const second=step({...first,at:30000},{received:0},60000);
- assert.equal(second.transition,'offline');
+ assert.equal(second.transition,null);
+ const third=step({...second,at:60000},{received:0},90000);assert.equal(third.transition,'offline');
 });

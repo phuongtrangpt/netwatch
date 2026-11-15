@@ -1,3 +1,4 @@
+import {inMaintenance} from './monitoring';
 import {decryptSecret} from './auth';
 import {scopedKey,findProject,projectDisplayName} from '../lib/projects';
 import {projectTelegramMessage} from '../lib/telegram-message';
@@ -37,11 +38,11 @@ export async function sendOwnerTelegram(db:Store,message:string):Promise<boolean
  try{const config=await getGlobalTelegramConfig(db);if(!config.ownerChatId||!config.tokenCipher)return false;return sendTelegramConfig({enabled:true,chatId:config.ownerChatId,tokenCipher:config.tokenCipher},message);}catch{return false;}
 }
 
-async function deliverAlert(db:Store,project:string,config:TelegramConfig,message:string){
+async function deliverAlert(db:Store,project:string,config:TelegramConfig,message:string,target='project',entries?:{target:string;message:string}[]){
  // Persist each destination independently before delivery. One working recipient
  // must not hide a failed group delivery or discard an alert during an outage.
  const key='telegram_outbox:'+crypto.randomUUID(),now=Date.now();
- const value={project,chatId:config.chatId,tokenCipher:config.tokenCipher,message,createdAt:now,nextAttemptAt:now+30000,attempts:0};
+ const value={project,target,entries,chatId:config.chatId,tokenCipher:config.tokenCipher,message,createdAt:now,nextAttemptAt:now+30000,attempts:0};
  await db.prepare('INSERT INTO settings(key,value) VALUES (?,?)').bind(key,JSON.stringify(value)).run();
  const ok=await sendTelegramConfig(config,message);
  if(ok)await db.prepare('DELETE FROM settings WHERE key=?').bind(key).run();
@@ -57,11 +58,14 @@ export async function retryTelegramAlerts(db:Store){
   let tried=0;
   for(const row of rows.results.sort((a:any,b:any)=>JSON.parse(a.value).createdAt-JSON.parse(b.value).createdAt)){
    const item=JSON.parse(row.value),now=Date.now();
+   if(await inMaintenance(db,item.project,item.target||'project',now)){await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();continue;}
+   if(item.target&&item.target!=='project'){const router=await db.prepare('SELECT last_seen FROM router WHERE id=?').bind(item.project).first();if(!router?.last_seen||now-router.last_seen>180000){await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();continue;}}
    if(!await findProject(db as any,item.project)){await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();continue;}
    if(now-item.createdAt>86400000){
     await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();
     await db.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),now,'warning',`Telegram không gửi được tới Chat ID ${item.chatId} sau 24 giờ; đã dừng thử lại.`,item.project).run();continue;
    }
+   if(item.entries){const allowed=[];for(const entry of item.entries)if(!await inMaintenance(db,item.project,entry.target,now))allowed.push(entry);item.entries=allowed;if(!allowed.length){await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();continue;}item.message=allowed.map((entry:any)=>entry.message).join('\n');}
    if(item.nextAttemptAt>now||tried>=2)continue;tried++;
    const projectInfo=await findProject(db as any,item.project);const retryMessage=projectTelegramMessage(projectInfo?projectDisplayName(projectInfo):item.project,item.message);
    if(await sendTelegramConfig({enabled:true,chatId:item.chatId,tokenCipher:item.tokenCipher},retryMessage))await db.prepare('DELETE FROM settings WHERE key=?').bind(row.key).run();
@@ -70,17 +74,18 @@ export async function retryTelegramAlerts(db:Store){
  }finally{flushing=false;}
 }
 
-export async function sendTelegram(db:Store,project:string,message:string):Promise<boolean>{
+export async function sendTelegram(db:Store,project:string,message:string,target='project',entries?:{target:string;message:string}[]):Promise<boolean>{
  try{
+  if(await inMaintenance(db,project,target))return false;
   const info=await findProject(db as any,project);
   message=projectTelegramMessage(info?projectDisplayName(info):project,message);
-  const global=await getGlobalTelegramConfig(db),target=await getTelegramConfig(db,project);
+  const global=await getGlobalTelegramConfig(db),projectConfig=await getTelegramConfig(db,project);
   if(global.tokenCipher){
-   const destinations=[global.ownerChatId,...(target.enabled?[target.chatId]:[])].filter((x,i,a)=>!!x&&a.indexOf(x)===i);
-   const results=await Promise.all(destinations.map(chatId=>deliverAlert(db,project,{enabled:true,chatId,tokenCipher:global.tokenCipher},message)));
+   const destinations=[global.ownerChatId,...(projectConfig.enabled?[projectConfig.chatId]:[])].filter((x,i,a)=>!!x&&a.indexOf(x)===i);
+   const results=await Promise.all(destinations.map(chatId=>deliverAlert(db,project,{enabled:true,chatId,tokenCipher:global.tokenCipher},message,target,entries)));
    return results.some(Boolean);
   }
   // Keep existing 1.0.5 installations working until the owner configures the shared bot.
-  const legacy=await getLegacyTelegramConfig(db,project);return legacy.enabled?deliverAlert(db,project,legacy,message):false;
+  const legacy=await getLegacyTelegramConfig(db,project);return legacy.enabled?deliverAlert(db,project,legacy,message,target,entries):false;
  }catch{return false;}
 }

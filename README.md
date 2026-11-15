@@ -19,6 +19,8 @@ DHCP/PPPoE và lịch sử lưu cục bộ trong `/data`.
 - Cảnh báo Telegram khi có sự cố, nhắc lại theo cấu hình.
 - Nhiều dự án, tài khoản chỉ xem và dữ liệu lưu tại máy chủ của bạn.
 
+**Lịch sử & bảo trì:** theo dõi uptime 24 giờ/7 ngày, thời gian gián đoạn và ping ms (MikroTik collector v7); bảo trì có thời hạn. [Hướng dẫn](docs/MONITORING.md).
+
 **NEC IX2106:** chọn hãng NEC khi tạo dự án và kết nối SNMP v2c trong LAN/VPN. Hỗ trợ ban đầu tên/uptime/interface/lưu lượng; chưa kiểm thử router thật. [Phạm vi và hướng dẫn NEC](docs/NEC.md).
 
 **[Tải gói Windows x64](https://github.com/phuongtrangpt/netwatch/releases/latest)** · **[Hướng dẫn cài và cấu hình](netwatch/DOCS.md)**
@@ -54,12 +56,12 @@ Mỗi lần tăng phiên bản trên main, workflow kiểm tra, đẩy image đa
 Không cần Docker Hub hoặc token cá nhân cho workflow: GHCR dùng GITHUB_TOKEN với quyền
 packages:write. Không commit `.env`, database, khóa router hoặc dữ liệu xuất từ web cũ.
 
-## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.25)
+## Cài trên Windows, macOS, Linux và Home Assistant OS (1.0.27)
 
 ![Hướng dẫn cài NetWatch trên Windows x64](docs/images/install-windows.svg)
 
-- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.25.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
-- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.25` hoặc `compose.yaml`.
+- **Windows 10/11 x64, không cần cài Docker hoặc Node.js:** tải `netwatch-windows-x64-1.0.27.zip` tại [GitHub Releases](https://github.com/phuongtrangpt/netwatch/releases/latest), giải nén rồi mở `Start-NetWatch.bat`. Lần đầu tạo mật khẩu Admin; dữ liệu lưu trong thư mục `data` cạnh ứng dụng.
+- **Windows có Docker Desktop, macOS có Docker Desktop, Linux có Docker Engine:** dùng image `ghcr.io/phuongtrangpt/netwatch:1.0.27` hoặc `compose.yaml`.
 - Image Docker có `linux/amd64` cho PC/server x86-64, `linux/arm64` cho Apple Silicon và máy chủ ARM64, `linux/arm/v7` cho hệ ARM32 tương thích. Windows/macOS Docker Desktop chạy image Linux trong máy ảo Docker.
 - **Home Assistant OS:** tiếp tục cài add-on theo hướng dẫn hiện tại; máy chủ aarch64 tự nhận image ARM64.
 
@@ -67,7 +69,7 @@ Bản Windows portable x64 được kiểm tra khởi động trên Windows CI. 
 
 ## Kiến trúc và kiểm tra
 
-Image: `ghcr.io/phuongtrangpt/netwatch:1.0.25`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
+Image: `ghcr.io/phuongtrangpt/netwatch:1.0.27`, gồm `linux/amd64`, `linux/arm64` và `linux/arm/v7`.
 Chọn kiến trúc theo phần cứng máy chủ: x86-64, ARM64 hoặc ARMv7.
 Docker image dùng Node.js 22 LTS Alpine vì hỗ trợ đồng thời amd64, ARM64 và ARMv7. Gói Windows portable dùng Node.js 24 LTS. Hai cách cài dùng cùng mã ứng dụng; dữ liệu lưu riêng trong từng cài đặt.
 

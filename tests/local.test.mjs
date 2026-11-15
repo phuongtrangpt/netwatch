@@ -22,6 +22,10 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   const headers={origin,cookie,'Content-Type':'application/json'};
   const api=(path,body,extra={})=>fetch(origin+path,{method:body?'POST':'GET',headers:{...headers,...extra},...(body?{body:JSON.stringify(body)}:{})});
   r=await api('/api/dashboard');assert.equal(r.status,200);assert.equal((await r.json()).paired,false);
+  assert.equal((await fetch(origin+'/api/monitoring')).status,401);
+  assert.equal((await api('/api/monitoring',{target:'project',minutes:5,reason:''})).status,400);
+  assert.equal((await api('/api/monitoring',{target:'device-not-here',minutes:60,reason:''})).status,400);
+  assert.equal((await api('/api/monitoring',{target:'project',minutes:60,reason:''},{origin:'https://wrong.test'})).status,403);
   r=await api('/api/config',{wans:['ether1'],aliases:{ether1:'FPT'},manual:true},{origin:'https://wrong.test'});assert.equal(r.status,403);
   r=await api('/api/config',{wans:['ether1'],aliases:{ether1:'FPT'},manual:true});assert.equal(r.status,200);
   r=await api('/api/pair',{version:'7.21.5'});assert.equal(r.status,200);const script=await r.text();assert.ok(script.includes(origin+'/api/ingest'));assert.ok(!script.includes('OAI-Sites-Authorization'));
@@ -148,6 +152,9 @@ test('viewer reads all projects, cannot edit or obtain installers, survives rest
   assert.equal((await api('/api/dashboard',admin.cookie)).status,200);
   r=await api('/api/viewer',admin.cookie,{enabled:true,username:'tenant',password:'tenant-password-123',permissions:{main:['topology']}});assert.equal(r.status,200);
   const tenant=await login('tenant','tenant-password-123');assert.equal(tenant.status,303);
+  assert.equal((await api('/api/monitoring',tenant.cookie)).status,403);
+  assert.equal((await api('/api/monitoring',admin.cookie)).status,200);
+  assert.equal((await api('/api/monitoring',tenant.cookie,{target:'project',minutes:60,reason:''})).status,403);
   r=await api('/api/projects',tenant.cookie);assert.deepEqual((await r.json()).projects.map(p=>p.id),['main']);
   assert.equal((await api('/api/dashboard?project=main&module=overview',tenant.cookie)).status,403);
   assert.equal((await api('/api/dashboard?project=main&module=topology',tenant.cookie)).status,200);
@@ -192,8 +199,8 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   await ingest(metrics(false));assert.equal(messages().length,3,'No repeated Link down alert');
   await ingest(metrics(false,false));assert.equal(messages().length,3,'LAN events do not generate WAN alerts');
   await ingest(metrics(true,false));assert.equal(messages().length,5);assert.ok(messages().slice(-2).every(m=>m.text.includes('Link đã phục hồi')));
-  const probes=received=>({kind:'wan-probes',results:[{interface:'ether1',sent:2,received},{interface:'ether2',sent:2,received:2}]});
-  await ingest(probes(2));await ingest(probes(0));assert.equal(messages().length,5,'First ping failure must not send false recovery');
+  const probes=received=>({kind:'wan-probes',results:[{interface:'ether1',sent:2,received,rttUs:received?12345:undefined},{interface:'ether2',sent:2,received:2}]});
+  await ingest(probes(2));const measured=await (await fetch(origin+'/api/monitoring',{headers:{cookie}})).json();assert.equal(measured.rows.find(x=>x.id==='internet:ether1').rttMs,12.345);await ingest(probes(0));assert.equal(messages().length,5,'First ping failure must not send false recovery');
   await ingest(probes(0));assert.equal(messages().length,7);assert.ok(messages().slice(-2).every(m=>m.text.includes('mất kết nối Internet')));
   await ingest(probes(0));assert.equal(messages().length,7);
   await ingest(probes(2));assert.equal(messages().length,9);assert.ok(messages().slice(-2).every(m=>m.text.includes('Internet đã kết nối trở lại')));
@@ -214,6 +221,21 @@ test('WAN link/probe alerts reach each Telegram destination, failed groups retry
   await ingest(metrics(true,false));assert.equal(messages().length,15);
   assert.deepEqual(JSON.parse(db.prepare("SELECT value FROM settings WHERE key='wan_reminder_state'").get().value),{});
   assert.ok(messages().every(m=>m.text.includes('NetWatch · Dự án: Trường Tam Thanh')),'Every WAN loss/recovery/reminder and retried group delivery includes the project name');
+  // Maintenance suppresses loss/recovery alerts while history keeps collecting.
+  const beforeMaintenance=messages().length;
+  assert.equal((await api('/api/monitoring',{target:'project',minutes:60,reason:'Thay switch'})).status,200);
+  await ingest(metrics(false));assert.equal(messages().length,beforeMaintenance);
+  let status=await (await fetch(origin+'/api/monitoring',{headers:{cookie}})).json();assert.equal(status.maintenance.length,1);assert.ok(status.rows.some(x=>x.id==='link:ether1'&&x.status==='offline'));
+  await stop();await start();status=await (await fetch(origin+'/api/monitoring',{headers:{cookie}})).json();assert.equal(status.maintenance.length,1,'Maintenance survives restart');
+  assert.equal((await api('/api/monitoring',{target:'project',minutes:0,reason:''})).status,200);
+  await ingest(metrics(true));assert.equal(messages().length,beforeMaintenance+4);
+  // Old probe reports cannot fan out alerts when the parent telemetry is stale.
+  await api('/api/config',{wans:['ether1','ether2'],aliases:{},manual:true});
+  db.prepare('UPDATE router SET last_seen=? WHERE id=?').run(Date.now()-240000,'main');
+  db.prepare("DELETE FROM settings WHERE key='wan_probe_latest'").run();
+  const staleProbe=await fetch(origin+'/api/ingest',{method:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({schema:1,...probes(0)})});assert.equal(staleProbe.status,200);assert.equal(messages().length,beforeMaintenance+4);
+  status=await (await fetch(origin+'/api/monitoring',{headers:{cookie}})).json();assert.ok(status.rows.filter(x=>x.kind==='internet').every(x=>x.status==='unknown'));
+
 
  }finally{if(child&&child.exitCode===null)await stop();db?.close();rmSync(data,{recursive:true,force:true});}
 });

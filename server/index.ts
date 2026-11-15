@@ -1,3 +1,5 @@
+import * as monitoring from '../app/api/monitoring/route';
+import {sweepMonitoring,finishExpiredMaintenance} from './monitoring';
 import * as nec from '../app/api/nec/route';
 import {startNEC,necConfig} from './nec';
 import {disclaimerHTML} from './disclaimer';
@@ -23,7 +25,7 @@ import * as profile from '../app/api/profile/route';
 import {sendTelegram,retryTelegramAlerts} from './telegram';
 import {sendScheduledTelegramSummary} from './telegram-summary';
 import {scopedKey} from '../lib/projects';
-const routes:any={nec,dashboard,projects,config,topology,pair,upgrade,ingest,telegram,profile};
+const routes:any={monitoring,nec,dashboard,projects,config,topology,pair,upgrade,ingest,telegram,profile};
 const root=resolve('dist/public'),port=Number(process.env.PORT||8080);
 for(const name of ['NETWATCH_INGEST_URL','NETWATCH_PUBLIC_URL'])if(process.env[name]){const u=new URL(process.env[name]!);if(!['http:','https:'].includes(u.protocol)||u.pathname!=='/'||u.search||u.hash||u.username||u.password)throw Error(name+' phải là URL gốc http(s)://HOST:PORT, không có đường dẫn hay thông tin đăng nhập.');process.env[name]=u.origin;}
 const browserOrigin=(req:any,url:URL)=>{
@@ -58,7 +60,8 @@ const server=createServer(async(req,res)=>{
    else{res.writeHead(302,{Location:'/login'});res.end();}return;
   }
   // Viewer access is an explicit read allowlist; router ingest has separate bearer authentication.
-  if(viewer&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session','/api/support','/api/system'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
+  if(viewer&&path.startsWith('/api/')&&!ingestRequest&&!(method==='GET'&&['/api/dashboard','/api/projects','/api/session','/api/support','/api/system','/api/monitoring'].includes(path))){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Tài khoản chỉ xem không được thay đổi dữ liệu hoặc tải bộ cài router.'}));return;}
+  if(viewer&&path==='/api/monitoring'&&(!projectAccess(auth,url.searchParams.get('project')||'main')||!canView(auth,url.searchParams.get('project')||'main','overview'))){res.writeHead(403);res.end();return;}
   let body:Buffer|undefined;
   if(!['GET','HEAD'].includes(method)){
    const chunks:Buffer[]=[];let size=0;
@@ -135,6 +138,7 @@ const server=createServer(async(req,res)=>{
    const request=new Request(url,{method,headers,...(body?{body}: {})});
    const result:Response=await requestContext.run({authenticated:!!auth,role:viewer?'viewer':'owner',originValidated:browserOrigin(req,url),identity:auth||undefined},()=>handler(request));
    let payload=Buffer.from(await result.arrayBuffer());
+   if(viewer&&method==='GET'&&result.ok&&path==='/api/monitoring'&&!canView(auth,url.searchParams.get('project')||'main','topology')){const data=JSON.parse(payload.toString());data.rows=data.rows.filter((r:any)=>r.kind!=='device');data.incidents=data.incidents.filter((r:any)=>r.kind!=='device');data.maintenance=data.maintenance.filter((m:any)=>m.target_id==='project');payload=Buffer.from(JSON.stringify(data));}
    if(viewer&&method==='GET'&&result.ok&&path==='/api/projects'){
     const data=JSON.parse(payload.toString());data.projects=data.projects.filter((p:any)=>projectAccess(auth,p.id));payload=Buffer.from(JSON.stringify(data));
    }
@@ -168,7 +172,7 @@ void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry
 server.requestTimeout=15000;server.headersTimeout=10000;
 server.listen(port,'0.0.0.0',()=>console.log(`NetWatch listening on :${port}; dữ liệu: ${process.env.DATA_DIR||'/data'}`));
 const checkRouterHeartbeat=()=>{try{const now=Date.now(),routers=sqlite.prepare('SELECT r.id,r.last_seen,p.name,p.vendor FROM router r LEFT JOIN projects p ON p.id=r.id WHERE r.last_seen IS NOT NULL').all() as any[];for(const r of routers){if(r.vendor==='nec'&&!necConfig(r.id)?.enabled)continue;const key=scopedKey(r.id,'router_alert_state'),row=sqlite.prepare('SELECT value FROM settings WHERE key=?').get(key) as any,offline=now-r.last_seen>180000,online=!offline,previous=row?JSON.parse(row.value):null;if(previous&&previous.online===online)continue;sqlite.prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify({online,at:now}));if(row||offline){const label=r.name||'Mạng chính';const message=offline?`Router không gửi dữ liệu trong hơn 3 phút: ${label}`:`Router đã gửi dữ liệu trở lại: ${label}`;sqlite.prepare('INSERT INTO events(id,at,level,message,project_id) VALUES (?,?,?,?,?)').run(crypto.randomUUID(),now,offline?'warning':'info',message,r.id);void sendTelegram(db,r.id,`${offline?'🔴':'🟢'} NetWatch · ${label}\n${message}`);}}}catch(error){console.error('NetWatch heartbeat monitor:',error instanceof Error?error.message:'error');}};
-const heartbeatTimer=setInterval(()=>{checkRouterHeartbeat();void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry:',error instanceof Error?error.message:'error'));},30000);heartbeatTimer.unref();
+const heartbeatTimer=setInterval(()=>{checkRouterHeartbeat();void sweepMonitoring(db).then(()=>finishExpiredMaintenance(db)).catch(()=>console.error('NetWatch: không cập nhật được lịch sử trạng thái'));void retryTelegramAlerts(db).catch(error=>console.error('NetWatch Telegram retry:',error instanceof Error?error.message:'error'));},30000);heartbeatTimer.unref();
 const summaryTimer=setInterval(()=>{void sendScheduledTelegramSummary().catch(error=>console.error('NetWatch Telegram summary:',error instanceof Error?error.message:'error'));},30000);summaryTimer.unref();
 const stopNEC=startNEC();
 function shutdown(){stopNEC();clearInterval(heartbeatTimer);clearInterval(summaryTimer);server.close(()=>{sqlite.pragma('wal_checkpoint(TRUNCATE)');sqlite.close();process.exit(0);});setTimeout(()=>process.exit(1),10000).unref();}

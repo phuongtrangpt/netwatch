@@ -28,4 +28,6 @@ for(const mode of ['infrastructure','pppoe']){
  });
 }
 
-test('collector v6 covers 100 configured IPs in both installation modes',()=>{for(const mode of ['infrastructure','pppoe']){const script=source(installer('http://localhost:8080','',token,'main',mode),'nwSource');assert.ok(script.includes('$nwProbeCount < 100'));assert.ok(script.includes('"collector"=6'));assert.ok(!script.includes('$nwProbeCount < 16'));}});
+test('collector v7 covers 100 configured IPs in both installation modes',()=>{for(const mode of ['infrastructure','pppoe']){const script=source(installer('http://localhost:8080','',token,'main',mode),'nwSource');assert.ok(script.includes('$nwProbeCount < 100'));assert.ok(script.includes('"collector"=7'));assert.ok(!script.includes('$nwProbeCount < 16'));}});
+
+test('RTT collector reuses the two existing pings and only counts successful echo replies',()=>{const code=source(installer('http://localhost:8080','',token),'nwSource');assert.ok(code.includes('count=2 interval=300ms as-value'));assert.ok(code.includes('[:tonsec [:totime ($nwPingRow->"time")]]'));assert.ok(code.includes('$nwStatus = "echo reply"'));assert.ok(code.includes('->"rttUs"'));assert.equal((code.match(/\/ping address=/g)||[]).length,2);});

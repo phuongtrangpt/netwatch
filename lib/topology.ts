@@ -20,7 +20,8 @@ export function probeState(device:WatchedDevice,probe:any,now:number,routerSeen:
  if(device.virtual)return {key:'virtual',label:'Online · mặc định',tone:'green'};
  if(!device.enabled)return {key:'paused',label:'Tạm dừng',tone:'gray'};
  if(!probe||probe.ip!==device.ip)return {key:'pending',label:'Chưa có kết quả ping',tone:'gray'};
- if(!routerSeen||now-routerSeen>100000||now-probe.at>120000)return {key:'stale',label:'Dữ liệu cũ',tone:'gray'};
+ if(!routerSeen||now-routerSeen>180000)return {key:'stale',label:'Chưa xác định · mất dữ liệu router',tone:'gray'};
+ if(now-probe.at>120000)return {key:'stale',label:'Dữ liệu cũ',tone:'gray'};
  if(probe.error)return {key:'error',label:'Lỗi kiểm tra ping',tone:'amber'};
  if(probe.received===0)return Number(probe.consecutiveFailures??1)>=3?{key:'down',label:'Offline',tone:'red'}:{key:'checking',label:'Đang xác nhận mất kết nối',tone:'amber'};
  if(probe.received<probe.sent)return {key:'partial',label:'Mất gói',tone:'amber'};

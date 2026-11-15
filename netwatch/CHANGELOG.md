@@ -1,3 +1,11 @@
+# 1.0.27
+
+- Thêm lịch sử trạng thái 24 giờ/7 ngày, dải xanh/đỏ/xám, uptime trên thời gian có dữ liệu, độ phủ dữ liệu và tổng thời gian gián đoạn.
+- Ghi nhận sự cố theo luồng dữ liệu router, link WAN, Internet WAN và ping thiết bị; giữ lịch sử qua khởi động lại, bắt đầu từ dữ liệu mới sau nâng cấp.
+- Bảo trì có thời hạn cho dự án hoặc từng IP: 30 phút/1 giờ/4 giờ/24 giờ; tiếp tục thu thập, tạm ngừng cảnh báo, hủy cảnh báo chờ liên quan; hết hạn tự tiếp tục cảnh báo và báo sự cố còn tồn tại.
+- Khi mất dữ liệu router, các đối tượng phụ thuộc chuyển chưa xác định, không gửi dồn cảnh báo thiết bị; không suy diễn lỗi kiểm tra ping thành mất Internet.
+- Bộ thu thập MikroTik v7 gửi thêm RTT trung bình từ hai gói ping sẵn có; cần tải bản nâng cấp script giữ nguyên khóa trong Kết nối router. Chỉ cập nhật web chưa đủ có ping ms. NEC chưa có RTT/ping IP.
+
 # 1.0.26
 
 - Quy hoạch Cấu hình giám sát thành 5 nhóm: Giám sát mạng, Thông báo, Quản trị viên, Người xem và Hỗ trợ.

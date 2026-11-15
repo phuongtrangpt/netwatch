@@ -22,6 +22,7 @@ export async function DELETE(req:Request){
   const prefix=input.id+':';
   await db.batch([
    db.prepare('DELETE FROM router WHERE id=?').bind(input.id),
+   ...['monitor_states','monitor_segments','maintenance'].map(table=>db.prepare('DELETE FROM '+table+' WHERE project_id=?').bind(input.id)),
    db.prepare('DELETE FROM project_history WHERE project_id=?').bind(input.id),
    db.prepare('DELETE FROM events WHERE project_id=?').bind(input.id),
    db.prepare('DELETE FROM section_chunks WHERE substr(name,1,?)=?').bind(prefix.length,prefix),
