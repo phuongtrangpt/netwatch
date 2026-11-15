@@ -1,0 +1,7 @@
+import {useState,type ReactNode} from 'react';
+import {Network,BellRing,ShieldCheck,Eye,Headset} from 'lucide-react';
+const groups=[{id:'network',name:'Giám sát mạng',hint:'WAN & thu thập',icon:Network},{id:'telegram',name:'Thông báo',hint:'Telegram & bản tin',icon:BellRing},{id:'admins',name:'Quản trị viên',hint:'Hồ sơ & bảo mật',icon:ShieldCheck},{id:'viewers',name:'Người xem',hint:'Tài khoản & phân quyền',icon:Eye},{id:'support',name:'Hỗ trợ',hint:'Thông tin liên hệ',icon:Headset}];
+export default function SettingsWorkspace({projectName,panels}:{projectName:string;panels:Record<string,ReactNode>}){
+ const [selected,setSelected]=useState('network');
+ return <div className="settings-workspace"><nav className="settings-navigation" aria-label="Nhóm cấu hình">{groups.filter(g=>panels[g.id]).map(({id,name,hint,icon:Icon})=><button type="button" key={id} aria-pressed={selected===id} aria-controls={'settings-'+id} onClick={()=>setSelected(id)}><Icon size={19}/><span><strong>{name}</strong><small>{hint}</small></span></button>)}</nav><div className="settings-context"><span>{selected==='network'||selected==='telegram'?'Dự án đang cấu hình':'Cài đặt chung'}</span><strong>{selected==='network'||selected==='telegram'?projectName:'Áp dụng cho toàn bộ NetWatch'}</strong></div>{groups.filter(g=>panels[g.id]).map(({id})=><div key={id} id={'settings-'+id} hidden={selected!==id} className={'settings-group settings-group-'+id}>{panels[id]}</div>)}</div>;
+}

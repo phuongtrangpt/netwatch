@@ -1,3 +1,10 @@
+# 1.0.26
+
+- Quy hoạch Cấu hình giám sát thành 5 nhóm: Giám sát mạng, Thông báo, Quản trị viên, Người xem và Hỗ trợ.
+- Danh sách interface WAN thành bảng cuộn có tiêu đề cố định, tìm kiếm và lọc đã chọn; nút lưu nằm ngay dưới bảng.
+- Bố cục máy tính có cột cảnh báo/chính sách riêng, Telegram chia hai khối; giao diện điện thoại cuộn bảng trong vùng riêng.
+- Giữ bản nháp WAN khi dữ liệu tự làm mới mà cấu hình không đổi; giữ đầy đủ tính năng và phân quyền hiện có.
+
 # 1.0.25
 
 - Thêm chọn hãng MikroTik / NEC khi tạo dự án; dự án cũ giữ MikroTik.
