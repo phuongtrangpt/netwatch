@@ -31,7 +31,7 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   r=await api('/api/pair',{version:'7.21.5'});assert.equal(r.status,200);const script=await r.text();assert.ok(script.includes(origin+'/api/ingest'));assert.ok(!script.includes('OAI-Sites-Authorization'));
   const token=script.match(/Authorization: Bearer ([a-f0-9]{64})/)[1];
   r=await fetch(origin+'/api/ingest',{method:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({schema:1,kind:'metrics',resource:{uptime:'1h','cpu-load':20},stats:[{name:'ether1',running:true,'rx-byte':1000,'tx-byte':1000}]})});assert.equal(r.status,200);
-  r=await api('/api/topology',{revision:0,devices:[{id:'device-aaa',name:'WiFi Tầng 2',ip:'10.10.10.5',type:'ap',parentId:'router',enabled:true,pinned:true}],layoutMode:'manual',positions:{'device-aaa':{x:260,y:300}},wireWaypoints:{},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
+  r=await api('/api/topology',{revision:0,devices:[{id:'device-aaa',name:'WiFi Tầng 2',ip:'10.10.10.5',type:'ap',parentId:'router',enabled:true,pinned:true}],layoutMode:'manual',positions:{'device-aaa':{x:260,y:300}},wireWaypoints:{'edge-device-aaa':[{x:-20,y:100}]},wireAnchors:{}});assert.equal(r.status,200,await r.clone().text());
   r=await api('/api/topology',{revision:0,devices:[]});assert.equal(r.status,409);
   r=await api('/api/projects',{name:'Nhà trọ',model:'MikroTik',mode:'pppoe'});assert.equal(r.status,200);
   r=await api('/api/projects',{name:'NEC thử nghiệm',vendor:'nec',model:'IX2106',mode:'infrastructure'});assert.equal(r.status,200);const necProject=(await r.json()).project;assert.equal(necProject.vendor,'nec');
@@ -45,7 +45,7 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
   assert.equal((await fetch(origin+'/api/projects',{method:'DELETE',headers,body:JSON.stringify({id:necProject.id,currentPassword:'test-password-12345'})})).status,200);
   const persisted=JSON.parse(readFileSync(join(data,'auth.json'),'utf8'));assert.ok(!JSON.stringify(persisted).includes('test-password'));
   await stop();await start();
-  r=await api('/api/dashboard');assert.equal(r.status,200);const state=await r.json();assert.equal(state.config.aliases.ether1,'FPT');assert.equal(state.topology.devices[0].name,'WiFi Tầng 2');assert.equal(state.topology.positions['device-aaa'].x,260);assert.equal(state.metrics.resource['cpu-load'],20);assert.equal(state.history.length,1);
+  r=await api('/api/dashboard');assert.equal(r.status,200);const state=await r.json();assert.equal(state.config.aliases.ether1,'FPT');assert.equal(state.topology.devices[0].name,'WiFi Tầng 2');assert.equal(state.topology.positions['device-aaa'].x,260);assert.equal(state.topology.wireWaypoints['edge-device-aaa'][0].x,-20);assert.equal(state.metrics.resource['cpu-load'],20);assert.equal(state.history.length,1);
   r=await api('/api/projects');assert.equal((await r.json()).projects.length,2);
   r=await fetch(origin+'/',{headers:{cookie}});assert.equal(r.status,200);const html=await r.text();assert.ok(html.includes('/assets/'));
   const assets=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css))"/g)].map(m=>m[1]);

@@ -46,3 +46,13 @@ it('routes compact topology cards without moving saved icons or crossing their i
  const nodes=[{...d('router',40,160),width:176,height:84},{...d('wan:fpt',40,20,'router'),kind:'wan' as const,width:176,height:84},...Array.from({length:16},(_,i)=>({...d('device-'+i,300,160+i*102,'router'),width:176,height:84}))];
  const snapshot=positionSnapshot(nodes),r=routeWires(nodes);assert.deepEqual(positionSnapshot(nodes),snapshot);assert.equal(r.conflicts,0);for(const wire of graphWires(nodes)){const points=r.routes[wire.id],a=wireAnchors(nodes,wire);assert.deepEqual(points[0],a.start);assert.deepEqual(points.at(-1),a.end);for(let i=1;i<points.length;i++)assert.ok(points[i].x===points[i-1].x||points[i].y===points[i-1].y);}
 });
+
+it('separates wires in a manually placed multi-floor compact map without moving devices',()=>{
+ const node=(id:string,x:number,y:number,parentId?:string)=>({...d(id,x,y,parentId),width:176,height:84});
+ const nodes=[node('router',1180,300),{...node('wan:fpt',1180,60,'router'),kind:'wan' as const},node('device-camera',860,200,'device-t1'),node('device-t1',860,510,'router'),node('device-t3',1450,300,'router'),node('device-t4',1460,980,'router'),node('device-t5',1100,1130,'router')];
+ for(const [i,[x,y]] of [[300,350],[600,350],[300,520],[540,520],[300,720],[600,720],[300,940]].entries())nodes.push(node('device-a'+i,x,y,'device-t1'));
+ for(const [i,[x,y]] of [[1720,380],[1930,380],[1720,480],[1720,620]].entries())nodes.push(node('device-b'+i,x,y,'device-t3'));
+ for(const [i,[x,y]] of [[1720,890],[1980,890],[1720,1140],[1980,1140]].entries())nodes.push(node('device-c'+i,x,y,'device-t4'));
+ for(const [i,[x,y]] of [[450,1130],[690,1130],[450,1340],[690,1340]].entries())nodes.push(node('device-e'+i,x,y,'device-t5'));
+ const before=positionSnapshot(nodes),r=routeWires(nodes);assert.deepEqual(positionSnapshot(nodes),before);assert.equal(r.conflicts,0,JSON.stringify(r.conflictIds));
+});

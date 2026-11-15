@@ -1,3 +1,11 @@
+# 1.0.29
+
+- Sơ đồ tương phản cao mặc định: nền trung tính, chữ/icon đậm, trạng thái có biểu tượng và kiểu nét riêng để không phụ thuộc phân biệt màu.
+- Thêm thước ngang/dọc theo tọa độ sơ đồ, hít lưới 10 px và đường canh hàng/cạnh/tâm khi kéo; có tùy chọn bật/tắt và nút zoom 100%.
+- Sửa Gỡ rối dây để bỏ góc cũ và tính lại đường đi, giữ vị trí thiết bị và neo đã đặt; ưu tiên tách dây, thêm lượt tối ưu thứ tự và tăng khoảng trống cho nhánh tự động.
+- Chọn dây để hiện các góc thực tế, kéo góc và cập nhật đoạn kề vuông góc; thêm góc bằng nhấn đúp đúng vị trí trên dây; có danh sách chọn dây khi nhiều dây nằm sát nhau.
+- Góc/neo vẫn cần Lưu đường dây; sơ đồ mặc định khóa, người xem không chỉnh được. Dây bị ràng buộc không thể tách được có cảnh báo để chỉnh tiếp.
+
 # 1.0.28
 
 - Sơ đồ dùng thẻ ngang nhỏ gọn 176×84 thay thẻ 210×170; icon nét đơn riêng cho router, switch, AP, camera, NVR, server, PC và máy in.
