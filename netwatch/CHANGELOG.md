@@ -1,3 +1,10 @@
+# 1.0.28
+
+- Sơ đồ dùng thẻ ngang nhỏ gọn 176×84 thay thẻ 210×170; icon nét đơn riêng cho router, switch, AP, camera, NVR, server, PC và máy in.
+- Giữ tên/IP/trạng thái, chấm màu và dấu ghim; tên dài có tooltip và vẫn xem đầy đủ khi chọn thiết bị.
+- Thu hẹp khoảng cách nhánh khi tự sắp xếp; giữ vị trí kéo tay và neo tương đối của sơ đồ cũ.
+- Thêm Vừa khung và mở rộng mức thu nhỏ cho sơ đồ đông thiết bị; giữ chế độ khóa sơ đồ mặc định.
+
 # 1.0.27
 
 - Thêm lịch sử trạng thái 24 giờ/7 ngày, dải xanh/đỏ/xám, uptime trên thời gian có dữ liệu, độ phủ dữ liệu và tổng thời gian gián đoạn.

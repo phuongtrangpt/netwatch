@@ -41,3 +41,8 @@ it('removes empty ether1/ether2 stubs even without PPPoE mapping and keeps WAN/L
  const multiple=compactPorts(topologyLayout(data,[...devices,{...devices[0],id:'device-lan2',ip:'10.0.0.3'}]).nodes);
  assert.ok(multiple.some(n=>n.id==='port:ether3'),'Populated LAN junction is retained');
 });
+
+it('routes compact topology cards without moving saved icons or crossing their interiors',()=>{
+ const nodes=[{...d('router',40,160),width:176,height:84},{...d('wan:fpt',40,20,'router'),kind:'wan' as const,width:176,height:84},...Array.from({length:16},(_,i)=>({...d('device-'+i,300,160+i*102,'router'),width:176,height:84}))];
+ const snapshot=positionSnapshot(nodes),r=routeWires(nodes);assert.deepEqual(positionSnapshot(nodes),snapshot);assert.equal(r.conflicts,0);for(const wire of graphWires(nodes)){const points=r.routes[wire.id],a=wireAnchors(nodes,wire);assert.deepEqual(points[0],a.start);assert.deepEqual(points.at(-1),a.end);for(let i=1;i<points.length;i++)assert.ok(points[i].x===points[i-1].x||points[i].y===points[i-1].y);}
+});
