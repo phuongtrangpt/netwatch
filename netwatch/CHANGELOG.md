@@ -1,3 +1,9 @@
+## 1.0.31
+- Khắc phục sơ đồ khựng khi mở/chỉnh sửa: tính đường dây tránh vật cản bằng Web Worker, không chặn giao diện.
+- Gộp yêu cầu tính lại, hủy công việc cũ, giữ kết quả khi chỉ đổi màu hoặc nhận dữ liệu trạng thái mới.
+- Chỉ dựng phần tử trong vùng nhìn; tái sử dụng cạnh và biểu tượng, giảm tần suất vẽ hiệu ứng dây vàng, tạm dừng khi kéo/phóng sơ đồ.
+- Giữ nền tùy chọn, vị trí thiết bị, neo và góc dây đã lưu. Không cần cập nhật script router.
+
 # 1.0.30
 
 - Dây có kết nối chuyển sang vàng và chuyển động theo đường dây; trạng thái Offline/Chưa xác định vẫn có kiểu nét và ký hiệu riêng.
