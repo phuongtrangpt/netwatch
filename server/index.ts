@@ -52,6 +52,7 @@ const server=createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('Cache-Control','no-store');
   if(path==='/healthz'&&method==='GET'){res.setHeader('X-NetWatch-Version',APP_VERSION);res.end('ok');return;}
   if(path==='/disclaimer'){if(!['GET','HEAD'].includes(method)){res.writeHead(405,{'Allow':'GET, HEAD'});res.end();return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(method==='HEAD'?undefined:disclaimerHTML);return;}
+  if(path==='/brand.png'&&['GET','HEAD'].includes(method)){res.setHeader('Content-Type','image/png');res.end(method==='HEAD'?undefined:await readFile(resolve(root,'brand.png')));return;}
   const auth=authenticated(req.headers.cookie||'');
   const viewer=!!auth&&auth.startsWith('viewer:');
   const ingestRequest=path==='/api/ingest'&&method==='POST';

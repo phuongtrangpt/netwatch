@@ -1,3 +1,8 @@
+## 1.0.32
+- Dùng logo chủ dự án cho biểu tượng và logo add-on Home Assistant.
+- Đồng bộ logo trang đăng nhập, thanh bên và biểu tượng tab trình duyệt.
+- Logo đăng nhập được tải công khai; dữ liệu và API vẫn yêu cầu xác thực.
+
 ## 1.0.31
 - Tắt hoàn toàn hiệu ứng dây khi bật Chỉnh sơ đồ; tự bật lại khi Xong chỉnh sơ đồ.
 - Khắc phục sơ đồ khựng khi mở/chỉnh sửa: tính đường dây tránh vật cản bằng Web Worker, không chặn giao diện.

@@ -14,6 +14,7 @@ test('local auth, pairing, SQLite batches, topology and restart persistence',asy
  async function stop(){child.kill('SIGTERM');await once(child,'exit');}
  try{
   await start();
+  const logo=await fetch(origin+'/brand.png');assert.equal(logo.status,200);assert.match(logo.headers.get('content-type'),/image\/png/);assert.deepEqual(Buffer.from(await logo.arrayBuffer()),readFileSync('public/brand.png'));assert.equal((await fetch(origin+'/brand.png',{method:'HEAD'})).status,200);assert.match(await (await fetch(origin+'/login')).text(),/src="\/brand.png"/);
   const disclosure=await fetch(origin+'/disclaimer');assert.equal(disclosure.status,200);assert.match(disclosure.headers.get('content-type'),/text\/html/);const disclosureHtml=await disclosure.text();assert.ok(disclosureHtml.includes('Miễn trừ trách nhiệm và lưu ý sử dụng'));assert.ok(disclosureHtml.includes('không loại trừ'));assert.ok(!disclosureHtml.includes('test-password-12345'));
   assert.equal((await fetch(origin+'/disclaimer',{method:'HEAD'})).status,200);assert.equal((await fetch(origin+'/disclaimer',{method:'POST'})).status,405);assert.ok((await (await fetch(origin+'/login')).text()).includes('href="/disclaimer"'));
   assert.equal((await fetch(origin+'/api/dashboard',{headers:{'oai-authenticated-user-id':'fake'}})).status,401);

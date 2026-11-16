@@ -1,5 +1,5 @@
 name: NetWatch Local
-version: "1.0.31"
+version: "1.0.32"
 slug: netwatch_local
 description: Giám sát MikroTik và NEC SNMP thử nghiệm, lưu dữ liệu cục bộ
 arch:
