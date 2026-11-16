@@ -1,11 +1,19 @@
+# Màu nền và dây vàng (1.0.30)
+
+Trên thanh công cụ sơ đồ, mở **Nền sơ đồ** để chọn Đen, Trắng, Xám hoặc màu tùy chọn. Mặc định nền đen. Thẻ thiết bị, chữ, thước và đường canh tự chuyển theo nền sáng/tối để dễ đọc. Thay màu không di chuyển thiết bị, sửa góc/neo hoặc thay cấu hình router; người xem cũng có thể chọn màu.
+
+Lựa chọn lưu riêng trong trình duyệt tại địa chỉ NetWatch đang dùng, dùng lại khi tải lại trang và áp dụng cho các dự án trong trình duyệt đó. Trình duyệt/địa chỉ khác có lựa chọn riêng. Xóa dữ liệu trang web sẽ đặt lại lựa chọn.
+
+Dây đang có kết nối có màu vàng và chuyển động theo đường dây. Dây Offline/Chưa xác định đứng yên, vẫn có kiểu nét khác nhau. Trên nền trắng, viền đậm giúp nhận rõ dây vàng. Hệ điều hành đặt giảm chuyển động sẽ làm hiệu ứng đứng yên, vẫn giữ màu vàng.
+
 # Sơ đồ tương phản cao, thước canh và góc dây (1.0.29)
 
 ## Dễ nhìn khi khó phân biệt màu
 
 Nền trung tính, icon/chữ/viền đậm. Có chữ và ký hiệu trạng thái:
 
-- Có kết nối: dấu kiểm, đường nét liền màu xanh đậm.
-- Offline: dấu X, đường nét đứt dài màu nâu cam đậm.
+- Có kết nối: dấu kiểm, đường nét đứt chuyển động màu vàng (từ 1.0.30).
+- Offline: dấu X, đường nét đứt dài màu nâu cam/orange tùy nền.
 - Đang kiểm tra: dấu cảnh báo, kiểu nét dài/ngắn.
 - Chưa xác định/dữ liệu cũ: dấu hỏi, nét chấm ngắn và viền đứt.
 

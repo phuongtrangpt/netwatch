@@ -1,3 +1,10 @@
+# 1.0.30
+
+- Dây có kết nối chuyển sang vàng và chuyển động theo đường dây; trạng thái Offline/Chưa xác định vẫn có kiểu nét và ký hiệu riêng.
+- Thêm Nền sơ đồ: Đen, Trắng, Xám và màu tùy chọn; lưu riêng trong trình duyệt, áp dụng mọi dự án tại cùng địa chỉ web. Mặc định nền đen.
+- Nền tối tự đổi thẻ thiết bị, chữ, thước, đường canh và điều khiển để giữ tương phản; dây vàng có viền đậm trên nền sáng.
+- Giữ vị trí thiết bị, đường đi, góc và neo; thay đổi màu không cần mở khóa sơ đồ hoặc nâng script router.
+
 # 1.0.29
 
 - Sơ đồ tương phản cao mặc định: nền trung tính, chữ/icon đậm, trạng thái có biểu tượng và kiểu nét riêng để không phụ thuộc phân biệt màu.

@@ -1,0 +1,4 @@
+export const DEFAULT_DIAGRAM_BACKGROUND='#0b0f16';
+export const DIAGRAM_BACKGROUND_KEY='netwatch-diagram-background';
+export function validBackground(value:unknown):value is string{return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);}
+export function diagramAppearance(value:unknown){const background=validBackground(value)?value:DEFAULT_DIAGRAM_BACKGROUND;const rgb=[1,3,5].map(i=>parseInt(background.slice(i,i+2),16)/255);const luminance=rgb.reduce((sum,c,i)=>sum+(c<=.04045?c/12.92:((c+.055)/1.055)**2.4)*[.2126,.7152,.0722][i],0);const dark=luminance<.4;return {background,dark,grid:dark?'#3d4859':'#b6c0cc',ruler:dark?'#18212f':'#fff',guide:dark?'#fff':'#111827',online:'#facc15',offline:dark?'#fb923c':'#b45309',unknown:dark?'#cbd5e1':'#475467',pending:dark?'#fde68a':'#805200',outline:dark?'#080b10':'#725300',labelBackground:dark?'#111827':'#fff',labelText:dark?'#f8fafc':'#172b4d'};}
