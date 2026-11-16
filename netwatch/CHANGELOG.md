@@ -1,4 +1,5 @@
 ## 1.0.31
+- Tắt hoàn toàn hiệu ứng dây khi bật Chỉnh sơ đồ; tự bật lại khi Xong chỉnh sơ đồ.
 - Khắc phục sơ đồ khựng khi mở/chỉnh sửa: tính đường dây tránh vật cản bằng Web Worker, không chặn giao diện.
 - Gộp yêu cầu tính lại, hủy công việc cũ, giữ kết quả khi chỉ đổi màu hoặc nhận dữ liệu trạng thái mới.
 - Chỉ dựng phần tử trong vùng nhìn; tái sử dụng cạnh và biểu tượng, giảm tần suất vẽ hiệu ứng dây vàng, tạm dừng khi kéo/phóng sơ đồ.

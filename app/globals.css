@@ -87,3 +87,6 @@
 /* Limit SVG repaint frequency; pan/zoom/drag takes priority over decoration. */
 .diagram-themed .react-flow__edge.animated .react-flow__edge-path{animation-timing-function:steps(12,end)!important}
 .diagram-interacting .react-flow__edge.animated .react-flow__edge-path{animation-play-state:paused!important}
+
+/* Editing prioritizes precise placement over motion, even while idle. */
+.diagram-editing .react-flow__edge.animated .react-flow__edge-path{animation:none!important}

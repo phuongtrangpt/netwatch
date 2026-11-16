@@ -1,7 +1,7 @@
 ## Hiệu năng sơ đồ (v1.0.31)
 Tính đường đi tránh chồng lấn chạy trong Web Worker. Trong lúc tính, sơ đồ hiển thị đường xem trước và vẫn thao tác được. Yêu cầu chỉnh góc liên tiếp được gộp trong 120 ms, công việc cũ bị hủy và không được ghi đè kết quả mới. Đổi nền hoặc cập nhật trạng thái không chạy lại bộ tìm đường nếu hình học không đổi. Trình duyệt không hỗ trợ Worker dùng đường xem trước nhẹ, vẫn giữ góc/neo đã lưu.
 
-Dây vàng vẫn chuyển động nhưng giảm số lần vẽ, tạm dừng lúc kéo/phóng/di chuyển sơ đồ. Chỉ các phần tử trong vùng nhìn được dựng.
+Dây vàng vẫn chuyển động nhưng giảm số lần vẽ. Hiệu ứng tắt hoàn toàn trong chế độ Chỉnh sơ đồ, tự bật lại khi Xong chỉnh sơ đồ; ở chế độ xem, tạm dừng lúc kéo/phóng/di chuyển sơ đồ. Chỉ các phần tử trong vùng nhìn được dựng.
 
 # Màu nền và dây vàng (1.0.30)
 
